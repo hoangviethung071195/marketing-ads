@@ -269,7 +269,8 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 
-const apiBase = 'http://localhost:3001'
+const config = useRuntimeConfig()
+const apiBase = config.public.apiBase || 'http://localhost:3001'
 
 const activeTab = ref('ads')
 const searchQuery = ref('')
