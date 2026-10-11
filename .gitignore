@@ -1,0 +1,73 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+jspm_packages/
+typings/
+
+# Build and Output directories
+dist/
+build/
+out/
+.next/
+.nuxt/
+
+# Environment and Secret files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.pem
+*.key
+*.cert
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# IDE / Editor files
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.DS_Store
+Thumbs.db
+
+# OS Generated files
+ehthumbs.db
+Desktop.ini
+
+# NestJS / TypeScript
+*.tsbuildinfo
+
+# Flutter / Dart
+.dart_tool/
+.fvm/
+.pub-cache/
+.pub/
+flutter_*.png
+packages
+
+# Android / iOS build artifacts
+**/android/app/debug
+**/android/app/profile
+**/android/app/release
+**/ios/Flutter/App.framework
+**/ios/Flutter/Flutter.framework
+**/ios/Flutter/Flutter.podspec
+**/ios/Pods/
+
+# Coverage / Test reports
+coverage/
+.nyc_output/

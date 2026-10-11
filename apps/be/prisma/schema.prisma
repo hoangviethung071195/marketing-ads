@@ -1,0 +1,123 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model AdAccount {
+  id            String     @id // e.g. act_123456789
+  name          String
+  accountStatus Int        @default(1)
+  currency      String     @default("VND")
+  accessToken   String?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  campaigns     Campaign[]
+}
+
+model Campaign {
+  id          String    @id
+  name        String
+  status      String
+  objective   String?
+  // Parsed Naming Convention Tags
+  brand       String?   // Nhãn hàng: Smeg, WMF, Megasun, DongA...
+  target      String?   // Target/Loại: giaotiep, sale, LAL...
+  format      String?   // Format: Mess, CVS, Video, Post...
+  dateTag     String?   // Ngày tạo tag: 091026...
+  adAccountId String
+  adAccount   AdAccount @relation(fields: [adAccountId], references: [id], onDelete: Cascade)
+  adSets      AdSet[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model AdSet {
+  id         String   @id
+  name       String
+  status     String
+  targetAge  String?  // VD: 18-40, ST 8-10...
+  location   String?  // HN, HCM, ALL, Europe...
+  campaignId String
+  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  ads        Ad[]
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Ad {
+  id           String         @id // Facebook Ad ID (e.g. 1202058493012901)
+  name         String
+  status       String
+  contentTag   String?        // Tag content: IMAGES, VIDEO, CAROUSEL...
+  adSetId      String
+  adSet        AdSet          @relation(fields: [adSetId], references: [id], onDelete: Cascade)
+  creativeUrl  String?
+  insights     AdInsight[]
+  matchedLeads CustomerLead[]
+  orders       CrmOrder[]
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+}
+
+model AdInsight {
+  id                    String   @id @default(uuid())
+  adId                  String
+  ad                    Ad       @relation(fields: [adId], references: [id], onDelete: Cascade)
+  date                  String   // YYYY-MM-DD
+  impressions           Int      @default(0)
+  clicks                Int      @default(0)
+  spend                 Float    @default(0.0)
+  cpc                   Float    @default(0.0)
+  ctr                   Float    @default(0.0)
+  reach                 Int      @default(0)
+  messagingConversions Int      @default(0)
+  leads                 Int      @default(0)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@unique([adId, date])
+}
+
+model CustomerLead {
+  id             String     @id @default(uuid())
+  adId           String     // Facebook Ad ID matched
+  ad             Ad         @relation(fields: [adId], references: [id], onDelete: Cascade)
+  psid           String?    // Page Scoped ID Facebook
+  facebookUserId String?
+  customerName   String
+  phoneNumber    String?    // Normalized E.164 phone: 0987... -> 84987...
+  rawPhone       String?    // SĐT gốc khách chat
+  email          String?
+  channel        String     @default("MESSENGER") // MESSENGER, LEAD_FORM, WHATSAPP
+  createdTime    DateTime   @default(now())
+  notes          String?
+  orders         CrmOrder[]
+}
+
+model CrmOrder {
+  id             String        @id @default(uuid())
+  orderCode      String        @unique // Mã đơn hàng CRM (VD: DH100293)
+  customerPhone  String        // Khóa nối: SĐT khách
+  customerLeadId String?
+  customerLead   CustomerLead? @relation(fields: [customerLeadId], references: [id], onDelete: SetNull)
+  adId           String?
+  ad             Ad?           @relation(fields: [adId], references: [id], onDelete: SetNull)
+  revenue        Float         @default(0.0) // Doanh thu
+  status         String        @default("SUCCESS") // SUCCESS, CANCELLED, RETURNED
+  productName    String?
+  orderDate      DateTime      @default(now())
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+}
+
+model SyncLog {
+  id        String   @id @default(uuid())
+  type      String   // ADS, MESSENGER, WEBHOOK, CRM, ATTRIBUTION
+  status    String   // SUCCESS, FAILED
+  message   String
+  syncedAt  DateTime @default(now())
+}
