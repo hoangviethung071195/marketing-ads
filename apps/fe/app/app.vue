@@ -11,16 +11,22 @@
           </svg>
         </div>
         <div>
-          <h1>Marketing Report Tool</h1>
-          <p class="subtitle">Tự động kéo Facebook Ads Manager & Khớp dữ liệu Khách hàng theo Ad ID</p>
+          <h1>Marketing Multi-Level Attribution Tool</h1>
+          <p class="subtitle">Báo cáo đa chiều: Campaign ↔ Adset ↔ Ads ↔ Khớp Đơn Hàng CRM Đông Á (SHA-256)</p>
         </div>
       </div>
 
       <div class="actions">
-        <button class="btn btn-secondary" @click="syncData" :disabled="isSyncing">
-          <span v-if="isSyncing" class="spinner"></span>
+        <button class="btn btn-secondary" @click="syncCrmData" :disabled="isSyncingCrm">
+          <span v-if="isSyncingCrm" class="spinner"></span>
+          <svg v-else xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          {{ isSyncingCrm ? 'Đang kéo CRM...' : 'Đồng bộ Đơn Đông Á' }}
+        </button>
+
+        <button class="btn btn-secondary" @click="syncAllData" :disabled="isSyncingAll">
+          <span v-if="isSyncingAll" class="spinner"></span>
           <svg v-else xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
-          {{ isSyncing ? 'Đang đồng bộ...' : 'Đồng bộ Facebook Ads' }}
+          {{ isSyncingAll ? 'Đang đồng bộ...' : 'Đồng bộ Tất cả (Ads + Inbox)' }}
         </button>
 
         <a :href="apiBase + '/api/export/excel'" download class="btn btn-primary">
@@ -44,6 +50,17 @@
       </div>
 
       <div class="card kpi-card">
+        <div class="kpi-icon icon-emerald">
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m16 10-4 4-2-2"/></svg>
+        </div>
+        <div class="kpi-content">
+          <span class="kpi-label">Doanh Thu Khớp Thực Tế</span>
+          <h2 class="kpi-value text-emerald">{{ formatCurrency(totalAttributedRevenue) }}</h2>
+          <span class="kpi-sub font-mono">Đã chốt: {{ totalAttributedOrders }} đơn chốt từ Ads</span>
+        </div>
+      </div>
+
+      <div class="card kpi-card">
         <div class="kpi-icon icon-blue">
           <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
         </div>
@@ -55,52 +72,170 @@
       </div>
 
       <div class="card kpi-card">
-        <div class="kpi-icon icon-emerald">
-          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
-        </div>
-        <div class="kpi-content">
-          <span class="kpi-label">Tin Nhắn Messenger & Form</span>
-          <h2 class="kpi-value">{{ summary.totalMessages + summary.totalFormLeads }}</h2>
-          <span class="kpi-sub font-mono">{{ summary.totalMessages }} Messenger | {{ summary.totalFormLeads }} Form</span>
-        </div>
-      </div>
-
-      <div class="card kpi-card">
         <div class="kpi-icon icon-amber">
           <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         </div>
         <div class="kpi-content">
-          <span class="kpi-label">Khách Hàng Khớp Mã Ad ID</span>
-          <h2 class="kpi-value text-emerald">{{ summary.totalMatchedLeads }} Khách</h2>
+          <span class="kpi-label">Khách Hàng Khớp SĐT (Lead Funnel L1)</span>
+          <h2 class="kpi-value text-amber">{{ summary.totalMatchedLeads }} Khách</h2>
           <span class="kpi-sub font-mono">CPL Trung bình: {{ formatCurrency(summary.avgCpl) }}/Khách</span>
         </div>
       </div>
     </section>
 
-    <!-- Main Navigation Tabs -->
-    <div class="tabs">
-      <button class="tab-btn" :class="{ active: activeTab === 'ads' }" @click="activeTab = 'ads'">
-        📊 Báo Cáo Chi Tiết Quảng Cáo & Naming Tags
-      </button>
-      <button class="tab-btn" :class="{ active: activeTab === 'attribution' }" @click="activeTab = 'attribution'">
-        💰 Doanh Thu & ROAS theo Ad ID (Attribution)
-      </button>
-      <button class="tab-btn" :class="{ active: activeTab === 'leads' }" @click="activeTab = 'leads'">
-        👥 Khách Hàng Khớp SĐT & Ad ID ({{ leadsList.length }})
-      </button>
-      <button class="tab-btn" :class="{ active: activeTab === 'logs' }" @click="activeTab = 'logs'">
-        📋 Lịch Sử Đồng Bộ
-      </button>
+    <!-- Controls Bar: Dimension Selector & Search -->
+    <div class="controls-bar">
+      <!-- Main Navigation Tabs -->
+      <div class="tabs">
+        <button class="tab-btn" :class="{ active: activeTab === 'campaigns' }" @click="activeTab = 'campaigns'">
+          🎯 Báo Cáo Theo Chiến Dịch (Campaigns)
+        </button>
+        <button class="tab-btn" :class="{ active: activeTab === 'adsets' }" @click="activeTab = 'adsets'">
+          📁 Báo Cáo Theo Nhóm (AdSets)
+        </button>
+        <button class="tab-btn" :class="{ active: activeTab === 'ads' }" @click="activeTab = 'ads'">
+          📊 Báo Cáo Theo Mẫu Ads & Content
+        </button>
+        <button class="tab-btn" :class="{ active: activeTab === 'attribution' }" @click="activeTab = 'attribution'">
+          💰 Doanh Thu & ROAS Thực Tế ({{ matchedAttributionList.length }} Ads có đơn)
+        </button>
+        <button class="tab-btn" :class="{ active: activeTab === 'leads' }" @click="activeTab = 'leads'">
+          👥 Khách Khớp SĐT & CRM ({{ leadsList.length }})
+        </button>
+        <button class="tab-btn" :class="{ active: activeTab === 'logs' }" @click="activeTab = 'logs'">
+          📋 Nhật Ký Đồng Bộ
+        </button>
+      </div>
+
+      <div class="filter-box">
+        <input v-model="searchQuery" type="text" placeholder="Tìm theo tên, ID, hoặc Nhãn..." class="search-input" />
+      </div>
     </div>
 
-    <!-- Tab 1: Ads Report Table -->
+    <!-- TAB 1: CAMPAIGNS REPORT -->
+    <section v-if="activeTab === 'campaigns'" class="card table-card">
+      <div class="table-header">
+        <div>
+          <h3>Báo Cáo Hiệu Suất Theo Chiến Dịch (Campaign Level)</h3>
+          <p class="table-sub">Tổng hợp đa chiều toàn bộ Chi phí, Lượt xem, Clicks, Đơn hàng và Doanh thu theo từng Campaign</p>
+        </div>
+        <span class="badge badge-blue">{{ filteredCampaigns.length }} Chiến Dịch</span>
+      </div>
+
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Tên Chiến Dịch</th>
+              <th>Nhãn Hàng</th>
+              <th>Định Dạng</th>
+              <th>Target</th>
+              <th>Số Nhóm</th>
+              <th>Chi Phí (VND)</th>
+              <th>Hiển Thị</th>
+              <th>Clicks (CTR)</th>
+              <th>Tin Nhắn</th>
+              <th>Khách Khớp SĐT</th>
+              <th>Số Đơn CRM</th>
+              <th>Doanh Thu Đơn</th>
+              <th>ROAS</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="c in filteredCampaigns" :key="c.id">
+              <td>
+                <div class="font-bold text-white">{{ c.name }}</div>
+                <div class="font-mono text-dim text-xs">ID: {{ c.id }}</div>
+              </td>
+              <td><span class="badge badge-blue">{{ c.brand }}</span></td>
+              <td><span class="badge badge-amber">{{ c.format }}</span></td>
+              <td><span class="text-xs">{{ c.target }}</span></td>
+              <td class="font-mono">{{ c.adSetCount }} nhóm</td>
+              <td class="font-mono text-amber font-bold">{{ formatCurrency(c.spend) }}</td>
+              <td class="font-mono">{{ formatNumber(c.impressions) }}</td>
+              <td class="font-mono">{{ formatNumber(c.clicks) }} <span class="badge-sm">{{ c.ctr }}%</span></td>
+              <td class="font-mono">{{ c.messagingConversions }}</td>
+              <td><span class="badge badge-success">{{ c.matchedLeadsCount }}</span></td>
+              <td class="font-mono font-bold">{{ c.orderCount }} đơn</td>
+              <td class="font-mono font-bold text-emerald">{{ formatCurrency(c.totalRevenue) }}</td>
+              <td>
+                <span :class="['badge font-bold', c.roas >= 2 ? 'badge-success' : (c.roas > 0 ? 'badge-amber' : 'badge-dim')]">
+                  {{ c.roas }}x
+                </span>
+              </td>
+            </tr>
+            <tr v-if="filteredCampaigns.length === 0">
+              <td colspan="13" class="empty-cell">Không tìm thấy chiến dịch nào phù hợp.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- TAB 2: ADSETS REPORT -->
+    <section v-if="activeTab === 'adsets'" class="card table-card">
+      <div class="table-header">
+        <div>
+          <h3>Báo Cáo Hiệu Suất Theo Nhóm Quảng Cáo (AdSet Level)</h3>
+          <p class="table-sub">Tổng hợp chi phí và doanh thu chốt đơn theo từng Nhóm đối tượng mục tiêu</p>
+        </div>
+        <span class="badge badge-blue">{{ filteredAdSets.length }} Nhóm Quảng Cáo</span>
+      </div>
+
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Tên Nhóm (AdSet)</th>
+              <th>Thuộc Chiến Dịch</th>
+              <th>Nhãn Hàng</th>
+              <th>Số Mẫu Ads</th>
+              <th>Chi Phí (VND)</th>
+              <th>Hiển Thị</th>
+              <th>Clicks (CTR)</th>
+              <th>Tin Nhắn</th>
+              <th>Số Đơn CRM</th>
+              <th>Doanh Thu Đơn</th>
+              <th>ROAS</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="as in filteredAdSets" :key="as.id">
+              <td>
+                <div class="font-bold text-white">{{ as.name }}</div>
+                <div class="font-mono text-dim text-xs">ID: {{ as.id }}</div>
+              </td>
+              <td class="text-dim text-xs max-w-xs">{{ as.campaignName }}</td>
+              <td><span class="badge badge-blue">{{ as.brand }}</span></td>
+              <td class="font-mono">{{ as.adCount }} ads</td>
+              <td class="font-mono text-amber font-bold">{{ formatCurrency(as.spend) }}</td>
+              <td class="font-mono">{{ formatNumber(as.impressions) }}</td>
+              <td class="font-mono">{{ formatNumber(as.clicks) }} <span class="badge-sm">{{ as.ctr }}%</span></td>
+              <td class="font-mono">{{ as.messagingConversions }}</td>
+              <td class="font-mono font-bold">{{ as.orderCount }} đơn</td>
+              <td class="font-mono font-bold text-emerald">{{ formatCurrency(as.totalRevenue) }}</td>
+              <td>
+                <span :class="['badge font-bold', as.roas >= 2 ? 'badge-success' : (as.roas > 0 ? 'badge-amber' : 'badge-dim')]">
+                  {{ as.roas }}x
+                </span>
+              </td>
+            </tr>
+            <tr v-if="filteredAdSets.length === 0">
+              <td colspan="11" class="empty-cell">Không tìm thấy nhóm quảng cáo nào.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- TAB 3: ADS REPORT -->
     <section v-if="activeTab === 'ads'" class="card table-card">
       <div class="table-header">
         <div>
-          <h3>Hiệu Suất Quảng Cáo & Bóc Tách Naming Convention</h3>
-          <p class="table-sub">Bóc tách đa chiều: Nhãn Hàng (Brand), Mục Tiêu (Target), Định Dạng (Format), Chi phí, CPL</p>
+          <h3>Hiệu Suất Từng Mẫu Quảng Cáo & Naming Tags</h3>
+          <p class="table-sub">Bóc tách sâu: Brand, Target, Format, Date, Chi phí, Khách khớp SĐT và Doanh thu thực</p>
         </div>
-        <input v-model="searchQuery" type="text" placeholder="Tìm theo tên hoặc Ad ID..." class="search-input" />
+        <span class="badge badge-blue">{{ filteredAds.length }} Mẫu Ads</span>
       </div>
 
       <div class="table-wrapper">
@@ -110,14 +245,15 @@
               <th>Mã Ad ID</th>
               <th>Tên Quảng Cáo</th>
               <th>Nhãn Hàng</th>
-              <th>Mục Tiêu</th>
               <th>Định Dạng</th>
+              <th>Target</th>
               <th>Chi Phí (VND)</th>
               <th>Hiển Thị</th>
               <th>Clicks (CTR)</th>
-              <th>Tin Nhắn / Form</th>
               <th>Khách Khớp SĐT</th>
-              <th>CPL</th>
+              <th>Số Đơn CRM</th>
+              <th>Doanh Thu Đơn</th>
+              <th>ROAS</th>
             </tr>
           </thead>
           <tbody>
@@ -125,31 +261,36 @@
               <td class="font-mono text-cyan">{{ ad.id }}</td>
               <td class="font-bold">{{ ad.name }}</td>
               <td><span class="badge badge-blue">{{ ad.brand || 'Khác' }}</span></td>
-              <td>{{ ad.target || 'ALL' }}</td>
               <td><span class="badge badge-amber">{{ ad.format || 'MESS' }}</span></td>
+              <td><span class="text-xs">{{ ad.target || 'ALL' }}</span></td>
               <td class="font-mono text-amber">{{ formatCurrency(ad.spend) }}</td>
               <td class="font-mono">{{ formatNumber(ad.impressions) }}</td>
               <td class="font-mono">{{ formatNumber(ad.clicks) }} <span class="badge-sm">{{ ad.ctr }}%</span></td>
-              <td class="font-mono">{{ ad.messagingConversions }} msgs</td>
               <td>
                 <span class="badge badge-success">{{ ad.matchedLeadsCount }} Khách</span>
               </td>
-              <td class="font-mono font-bold text-emerald">{{ formatCurrency(ad.cpl) }}</td>
+              <td class="font-mono font-bold">{{ ad.orderCount }} đơn</td>
+              <td class="font-mono font-bold text-emerald">{{ formatCurrency(ad.totalRevenue) }}</td>
+              <td>
+                <span :class="['badge font-bold', ad.roas >= 2 ? 'badge-success' : (ad.roas > 0 ? 'badge-amber' : 'badge-dim')]">
+                  {{ ad.roas }}x
+                </span>
+              </td>
             </tr>
             <tr v-if="filteredAds.length === 0">
-              <td colspan="11" class="empty-cell">Chưa có dữ liệu quảng cáo.</td>
+              <td colspan="12" class="empty-cell">Chưa có dữ liệu quảng cáo.</td>
             </tr>
           </tbody>
         </table>
       </div>
     </section>
 
-    <!-- Tab: Attribution & ROAS -->
+    <!-- TAB 4: ATTRIBUTION & REAL ROAS -->
     <section v-if="activeTab === 'attribution'" class="card table-card">
       <div class="table-header">
         <div>
-          <h3>Attribution Engine: Doanh Thu & Hệ Số ROAS theo Ad ID</h3>
-          <p class="table-sub">Nối tự động: Ad ID ↔ Messenger PSID ↔ SĐT Khách Hàng ↔ Đơn Hàng CRM</p>
+          <h3>Bảng Đối Soát Doanh Thu & ROAS Thật Từ CRM Đông Á</h3>
+          <p class="table-sub">Nối tự động: Ad ID ↔ Messenger PSID ↔ SĐT Khách Hàng ↔ Đơn Hàng Thực Tế Hệ Thống Đông Á</p>
         </div>
       </div>
 
@@ -159,11 +300,12 @@
             <tr>
               <th>Mã Ad ID</th>
               <th>Tên Quảng Cáo</th>
+              <th>Thuộc Chiến Dịch</th>
               <th>Nhãn Hàng</th>
               <th>Chi Phí Ads</th>
               <th>Số Đơn Chốt</th>
               <th>Doanh Thu Đơn Hàng</th>
-              <th>ROAS</th>
+              <th>ROAS Thật</th>
               <th>CPA (Chi phí/Đơn)</th>
             </tr>
           </thead>
@@ -171,12 +313,13 @@
             <tr v-for="att in attributionList" :key="att.adId">
               <td class="font-mono text-cyan">{{ att.adId }}</td>
               <td class="font-bold">{{ att.adName }}</td>
+              <td class="text-dim text-xs">{{ att.campaignName }}</td>
               <td><span class="badge badge-blue">{{ att.brand }}</span></td>
               <td class="font-mono text-amber">{{ formatCurrency(att.spend) }}</td>
               <td class="font-mono font-bold">{{ att.orderCount }} đơn</td>
               <td class="font-mono font-bold text-emerald">{{ formatCurrency(att.totalRevenue) }}</td>
               <td>
-                <span :class="['badge', att.roas >= 2 ? 'badge-success' : 'badge-amber']">
+                <span :class="['badge font-bold', att.roas >= 2 ? 'badge-success' : (att.roas > 0 ? 'badge-amber' : 'badge-dim')]">
                   {{ att.roas }}x
                 </span>
               </td>
@@ -187,12 +330,12 @@
       </div>
     </section>
 
-    <!-- Tab 2: Customer Leads Table -->
+    <!-- TAB 5: LEADS TABLE -->
     <section v-if="activeTab === 'leads'" class="card table-card">
       <div class="table-header">
         <div>
-          <h3>Danh Sách Khách Hàng Được Gán Mã Ad ID</h3>
-          <p class="table-sub">Tự động nhận diện từ Messenger Conversation Referral và Facebook Form Lead</p>
+          <h3>Danh Sách Khách Hàng Khớp Số Điện Thoại & Mã Ad ID</h3>
+          <p class="table-sub">Khách hàng để lại SĐT qua Messenger Chat hoặc Form Lead, làm khóa nối với CRM Đông Á</p>
         </div>
       </div>
 
@@ -201,13 +344,12 @@
           <thead>
             <tr>
               <th>Mã Ad ID Khớp</th>
-              <th>Mẫu Quảng Cáo Thấy</th>
+              <th>Mẫu Quảng Cáo Tương Tác</th>
               <th>Tên Khách Hàng</th>
-              <th>Số Điện Thoại</th>
-              <th>Email</th>
+              <th>Số Điện Thoại (Khóa Nối)</th>
               <th>Kênh</th>
-              <th>Thời Gian</th>
-              <th>Nhu Cầu / Ghi Chú</th>
+              <th>Thời Gian Chat</th>
+              <th>Đơn Hàng Khớp Trong CRM</th>
             </tr>
           </thead>
           <tbody>
@@ -219,24 +361,28 @@
                 <span v-if="lead.phoneNumber" class="badge badge-success font-mono font-bold">{{ lead.phoneNumber }}</span>
                 <span v-else class="text-dim font-mono">-</span>
               </td>
-              <td class="font-mono">{{ lead.email || '-' }}</td>
               <td>
                 <span :class="['badge', lead.channel === 'MESSENGER' ? 'badge-blue' : 'badge-amber']">
                   {{ lead.channel }}
                 </span>
               </td>
               <td class="font-mono text-dim">{{ formatDate(lead.createdTime) }}</td>
-              <td>{{ lead.notes || '-' }}</td>
+              <td>
+                <span v-if="lead.orders && lead.orders.length > 0" class="badge badge-success">
+                  {{ lead.orders.length }} đơn ({{ formatCurrency(lead.orders.reduce((s, o) => s + o.revenue, 0)) }})
+                </span>
+                <span v-else class="text-dim text-xs">Chưa có đơn</span>
+              </td>
             </tr>
           </tbody>
         </table>
       </div>
     </section>
 
-    <!-- Tab 3: Sync Logs -->
+    <!-- TAB 6: SYNC LOGS -->
     <section v-if="activeTab === 'logs'" class="card table-card">
       <div class="table-header">
-        <h3>Nhật Ký Đồng Bộ API</h3>
+        <h3>Nhật Ký Đồng Bộ API Hệ Thống</h3>
       </div>
       <div class="table-wrapper">
         <table class="data-table">
@@ -251,7 +397,7 @@
           <tbody>
             <tr v-for="log in syncLogs" :key="log.id">
               <td class="font-mono">{{ formatDate(log.syncedAt) }}</td>
-              <td class="font-mono">{{ log.type }}</td>
+              <td class="font-mono"><span class="badge badge-blue">{{ log.type }}</span></td>
               <td>
                 <span :class="['badge', log.status === 'SUCCESS' ? 'badge-success' : 'badge-danger']">
                   {{ log.status }}
@@ -272,9 +418,10 @@ import { ref, computed, onMounted } from 'vue'
 const config = useRuntimeConfig()
 const apiBase = config.public.apiBase || 'http://localhost:3001'
 
-const activeTab = ref('ads')
+const activeTab = ref('campaigns')
 const searchQuery = ref('')
-const isSyncing = ref(false)
+const isSyncingAll = ref(false)
+const isSyncingCrm = ref(false)
 
 const summary = ref({
   totalSpend: 0,
@@ -288,10 +435,36 @@ const summary = ref({
   avgCpc: 0,
 })
 
+const campaignsList = ref([])
+const adSetsList = ref([])
 const adsList = ref([])
 const leadsList = ref([])
 const syncLogs = ref([])
 const attributionList = ref([])
+
+const totalAttributedRevenue = computed(() => {
+  return attributionList.value.reduce((acc, cur) => acc + (cur.totalRevenue || 0), 0)
+})
+
+const totalAttributedOrders = computed(() => {
+  return attributionList.value.reduce((acc, cur) => acc + (cur.orderCount || 0), 0)
+})
+
+const matchedAttributionList = computed(() => {
+  return attributionList.value.filter(a => a.totalRevenue > 0)
+})
+
+const filteredCampaigns = computed(() => {
+  if (!searchQuery.value) return campaignsList.value
+  const q = searchQuery.value.toLowerCase()
+  return campaignsList.value.filter(c => c.name.toLowerCase().includes(q) || (c.brand && c.brand.toLowerCase().includes(q)))
+})
+
+const filteredAdSets = computed(() => {
+  if (!searchQuery.value) return adSetsList.value
+  const q = searchQuery.value.toLowerCase()
+  return adSetsList.value.filter(a => a.name.toLowerCase().includes(q) || (a.campaignName && a.campaignName.toLowerCase().includes(q)))
+})
 
 const filteredAds = computed(() => {
   if (!searchQuery.value) return adsList.value
@@ -309,8 +482,10 @@ const sortedLeads = computed(() => {
 
 const fetchData = async () => {
   try {
-    const [resSummary, resAds, resLeads, resLogs, resAtt] = await Promise.all([
+    const [resSummary, resCamps, resAdSets, resAds, resLeads, resLogs, resAtt] = await Promise.all([
       fetch(`${apiBase}/api/reports/summary`).then(r => r.json()),
+      fetch(`${apiBase}/api/reports/campaigns`).then(r => r.json()),
+      fetch(`${apiBase}/api/reports/adsets`).then(r => r.json()),
       fetch(`${apiBase}/api/reports/ads`).then(r => r.json()),
       fetch(`${apiBase}/api/reports/leads`).then(r => r.json()),
       fetch(`${apiBase}/api/reports/sync-logs`).then(r => r.json()),
@@ -318,6 +493,8 @@ const fetchData = async () => {
     ])
 
     summary.value = resSummary
+    campaignsList.value = resCamps
+    adSetsList.value = resAdSets
     adsList.value = resAds
     leadsList.value = resLeads
     syncLogs.value = resLogs
@@ -327,15 +504,28 @@ const fetchData = async () => {
   }
 }
 
-const syncData = async () => {
-  isSyncing.value = true
+const syncAllData = async () => {
+  isSyncingAll.value = true
   try {
     await fetch(`${apiBase}/api/sync/all`, { method: 'POST' })
     await fetchData()
   } catch (err) {
     alert('Lỗi đồng bộ dữ liệu: ' + err.message)
   } finally {
-    isSyncing.value = false
+    isSyncingAll.value = false
+  }
+}
+
+const syncCrmData = async () => {
+  isSyncingCrm.value = true
+  try {
+    const res = await fetch(`${apiBase}/api/sync/crm`, { method: 'POST' }).then(r => r.json())
+    alert(`Đồng bộ đơn hàng thành công! Đã nạp ${res.result?.totalOrders || 0} đơn, khớp ${res.result?.matchedOrders || 0} đơn vào Ads.`)
+    await fetchData()
+  } catch (err) {
+    alert('Lỗi đồng bộ CRM: ' + err.message)
+  } finally {
+    isSyncingCrm.value = false
   }
 }
 
@@ -390,7 +580,7 @@ body {
 }
 
 .dashboard-container {
-  max-width: 1400px;
+  max-width: 1440px;
   margin: 0 auto;
 }
 
@@ -399,7 +589,7 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 28px;
+  margin-bottom: 24px;
   padding-bottom: 20px;
   border-bottom: 1px solid var(--card-border);
 }
@@ -447,10 +637,10 @@ h1 {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 12px 20px;
+  padding: 10px 18px;
   border-radius: 10px;
   font-weight: 600;
-  font-size: 14px;
+  font-size: 13px;
   cursor: pointer;
   transition: all 0.2s ease;
   text-decoration: none;
@@ -484,7 +674,7 @@ h1 {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 20px;
-  margin-bottom: 28px;
+  margin-bottom: 24px;
 }
 
 .card {
@@ -539,31 +729,62 @@ h1 {
   -webkit-text-fill-color: transparent;
 }
 
-/* Tabs */
-.tabs {
+/* Controls Bar */
+.controls-bar {
   display: flex;
-  gap: 10px;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
   margin-bottom: 20px;
   border-bottom: 1px solid var(--card-border);
   padding-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+/* Tabs */
+.tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .tab-btn {
   background: transparent;
   border: none;
   color: var(--text-muted);
-  padding: 10px 18px;
-  font-size: 14px;
+  padding: 10px 16px;
+  font-size: 13px;
   font-weight: 600;
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s;
 }
 
+.tab-btn:hover {
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.05);
+}
+
 .tab-btn.active {
   background: var(--card-bg);
-  color: var(--text-main);
+  color: #38bdf8;
   border: 1px solid var(--card-border);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.filter-box {
+  display: flex;
+  gap: 10px;
+}
+
+.search-input {
+  background: #0b0f19;
+  border: 1px solid var(--card-border);
+  padding: 10px 16px;
+  border-radius: 8px;
+  color: white;
+  font-size: 13px;
+  width: 280px;
 }
 
 /* Tables */
@@ -580,16 +801,6 @@ h1 {
   margin-top: 4px;
 }
 
-.search-input {
-  background: #0b0f19;
-  border: 1px solid var(--card-border);
-  padding: 10px 16px;
-  border-radius: 8px;
-  color: white;
-  font-size: 13px;
-  width: 280px;
-}
-
 .table-wrapper {
   overflow-x: auto;
 }
@@ -598,21 +809,22 @@ h1 {
   width: 100%;
   border-collapse: collapse;
   text-align: left;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .data-table th {
   background: #0f172a;
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  padding: 14px 16px;
+  padding: 14px 14px;
   border-bottom: 1px solid var(--card-border);
+  white-space: nowrap;
 }
 
 .data-table td {
-  padding: 16px;
+  padding: 14px;
   border-bottom: 1px solid var(--card-border);
 }
 
@@ -626,13 +838,15 @@ h1 {
 .text-amber { color: var(--amber); }
 .text-emerald { color: var(--emerald); }
 .text-dim { color: #64748b; }
+.text-xs { font-size: 11px; }
 
 .badge {
   display: inline-block;
   padding: 4px 10px;
   border-radius: 20px;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .badge-sm {
@@ -646,6 +860,7 @@ h1 {
 .badge-blue { background: rgba(99, 102, 241, 0.15); color: #818cf8; }
 .badge-amber { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
 .badge-danger { background: rgba(239, 68, 68, 0.15); color: #f87171; }
+.badge-dim { background: rgba(255, 255, 255, 0.05); color: #64748b; }
 
 .empty-cell {
   text-align: center;
@@ -654,8 +869,8 @@ h1 {
 }
 
 .spinner {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   border: 2px solid rgba(255, 255, 255, 0.3);
   border-radius: 50%;
   border-top-color: white;

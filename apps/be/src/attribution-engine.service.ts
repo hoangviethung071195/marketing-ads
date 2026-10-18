@@ -121,32 +121,4 @@ export class AttributionEngineService {
     });
   }
 
-  /**
-   * Tạo đơn hàng CRM mẫu (Demo Data) để đối soát nếu người dùng chưa kết nối API CRM
-   */
-  async seedSampleCrmOrders() {
-    const leadsWithPhone = await this.prisma.customerLead.findMany({
-      where: { phoneNumber: { not: null } },
-      take: 5,
-    });
-
-    const sampleOrders: CrmOrderInput[] = [];
-    let counter = 101;
-
-    for (const lead of leadsWithPhone) {
-      if (lead.phoneNumber) {
-        sampleOrders.push({
-          orderCode: `ORD_DA_${counter++}`,
-          customerPhone: lead.phoneNumber,
-          revenue: Math.floor(Math.random() * 4 + 2) * 1500000, // 3tr - 9tr VND
-          productName: 'Bộ nồi WMF / Máy pha cà phê Smeg',
-          status: 'SUCCESS',
-        });
-      }
-    }
-
-    if (sampleOrders.length > 0) {
-      await this.ingestCrmOrders(sampleOrders);
-    }
-  }
 }

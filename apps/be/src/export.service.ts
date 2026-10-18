@@ -7,19 +7,29 @@ export class ExportService {
   constructor(private prisma: PrismaService) {}
 
   /**
-   * Tạo file Excel báo cáo tổng hợp chi tiết theo Ad ID và Khách hàng
+   * Tạo file Excel báo cáo tổng hợp 3 Sheet: Campaign, Ads và Khách hàng
    */
   async generateMarketingReportExcel(): Promise<Buffer> {
     const workbook = new ExcelJS.Workbook();
     workbook.creator = 'Bizmind Tool Marketing';
     workbook.created = new Date();
 
-    // Font family & style standards
-    const headerFill: ExcelJS.Fill = {
+    const headerFillNavy: ExcelJS.Fill = {
       type: 'pattern',
       pattern: 'solid',
       fgColor: { argb: 'FF1E293B' }, // Dark slate
     };
+    const headerFillTeal: ExcelJS.Fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF0F766E' }, // Teal
+    };
+    const headerFillIndigo: ExcelJS.Fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF312E81' }, // Indigo
+    };
+
     const headerFont: Partial<ExcelJS.Font> = {
       name: 'Segoe UI',
       size: 11,
@@ -28,32 +38,132 @@ export class ExportService {
     };
 
     // -------------------------------------------------------------
-    // SHEET 1: Báo cáo Tổng quan Quảng cáo & Bóc Tách Naming Convention
+    // SHEET 1: Báo cáo Theo Chiến Dịch (Campaigns Level)
     // -------------------------------------------------------------
-    const sheet1 = workbook.addWorksheet('Báo Cáo Quảng Cáo Facebook');
-    sheet1.columns = [
-      { header: 'Mã Ads (Ad ID)', key: 'adId', width: 22 },
-      { header: 'Tên Quảng Cáo', key: 'adName', width: 32 },
-      { header: 'Chiến Dịch', key: 'campaignName', width: 30 },
-      { header: 'Nhãn Hàng (Brand)', key: 'brand', width: 18 },
-      { header: 'Mục Tiêu / Target', key: 'target', width: 20 },
-      { header: 'Định Dạng (Format)', key: 'format', width: 18 },
-      { header: 'Ngày Lên Camp', key: 'dateTag', width: 14 },
+    const sheetCamp = workbook.addWorksheet('Báo Cáo Theo Chiến Dịch');
+    sheetCamp.columns = [
+      { header: 'Mã Chiến Dịch', key: 'id', width: 24 },
+      { header: 'Tên Chiến Dịch', key: 'name', width: 34 },
+      { header: 'Nhãn Hàng', key: 'brand', width: 16 },
+      { header: 'Định Dạng', key: 'format', width: 16 },
+      { header: 'Target', key: 'target', width: 20 },
+      { header: 'Số Nhóm (AdSets)', key: 'adSetCount', width: 16 },
       { header: 'Chi Phí (VND)', key: 'spend', width: 18 },
       { header: 'Hiển Thị', key: 'impressions', width: 14 },
       { header: 'Clicks', key: 'clicks', width: 12 },
       { header: 'CTR (%)', key: 'ctr', width: 12 },
-      { header: 'Tin Nhắn / Form', key: 'messages', width: 18 },
+      { header: 'Tin Nhắn', key: 'messages', width: 14 },
       { header: 'Khách Khớp SĐT', key: 'matchedLeads', width: 16 },
       { header: 'Số Đơn CRM', key: 'orderCount', width: 14 },
       { header: 'Doanh Thu (VND)', key: 'revenue', width: 20 },
       { header: 'ROAS', key: 'roas', width: 12 },
     ];
 
-    // Style Header Row
-    sheet1.getRow(1).height = 28;
-    sheet1.getRow(1).eachCell((cell) => {
-      cell.fill = headerFill;
+    sheetCamp.getRow(1).height = 28;
+    sheetCamp.getRow(1).eachCell((cell) => {
+      cell.fill = headerFillIndigo;
+      cell.font = headerFont;
+      cell.alignment = { vertical: 'middle', horizontal: 'center' };
+    });
+
+    const campaigns = await this.prisma.campaign.findMany({
+      include: {
+        adSets: {
+          include: {
+            ads: {
+              include: {
+                insights: true,
+                matchedLeads: true,
+                orders: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    let totalCampSpend = 0;
+    let totalCampOrders = 0;
+    let totalCampRevenue = 0;
+
+    for (const camp of campaigns) {
+      let spend = 0;
+      let impressions = 0;
+      let clicks = 0;
+      let messagingConversions = 0;
+      let matchedLeadsCount = 0;
+      let totalRevenue = 0;
+      let orderCount = 0;
+
+      for (const adset of camp.adSets) {
+        for (const ad of adset.ads) {
+          const insight = ad.insights[0] || { spend: 0, impressions: 0, clicks: 0, messagingConversions: 0 };
+          spend += insight.spend || 0;
+          impressions += insight.impressions || 0;
+          clicks += insight.clicks || 0;
+          messagingConversions += insight.messagingConversions || 0;
+          matchedLeadsCount += ad.matchedLeads?.length || 0;
+
+          const validOrders = ad.orders?.filter((o) => o.status !== 'CANCELLED') || [];
+          orderCount += validOrders.length;
+          totalRevenue += validOrders.reduce((s, o) => s + (o.revenue || 0), 0);
+        }
+      }
+
+      const ctr = impressions > 0 ? parseFloat(((clicks / impressions) * 100).toFixed(2)) : 0;
+      const roas = spend > 0 ? parseFloat((totalRevenue / spend).toFixed(2)) : 0;
+
+      totalCampSpend += spend;
+      totalCampOrders += orderCount;
+      totalCampRevenue += totalRevenue;
+
+      const r = sheetCamp.addRow({
+        id: camp.id,
+        name: camp.name,
+        brand: camp.brand || 'Khác',
+        format: camp.format || 'MESS',
+        target: camp.target || 'ALL',
+        adSetCount: camp.adSets.length,
+        spend,
+        impressions,
+        clicks,
+        ctr: `${ctr}%`,
+        messages: messagingConversions,
+        matchedLeads: matchedLeadsCount,
+        orderCount,
+        revenue: totalRevenue,
+        roas: roas > 0 ? `${roas}x` : '0x',
+      });
+      r.height = 22;
+      r.getCell('spend').numFmt = '#,##0 "VND"';
+      r.getCell('revenue').numFmt = '#,##0 "VND"';
+    }
+
+    // -------------------------------------------------------------
+    // SHEET 2: Báo cáo Chi Tiết Mẫu Ads & Content
+    // -------------------------------------------------------------
+    const sheetAds = workbook.addWorksheet('Báo Cáo Chi Tiết Quảng Cáo');
+    sheetAds.columns = [
+      { header: 'Mã Ads (Ad ID)', key: 'adId', width: 22 },
+      { header: 'Tên Quảng Cáo', key: 'adName', width: 32 },
+      { header: 'Chiến Dịch', key: 'campaignName', width: 30 },
+      { header: 'Nhãn Hàng', key: 'brand', width: 16 },
+      { header: 'Mục Tiêu', key: 'target', width: 18 },
+      { header: 'Định Dạng', key: 'format', width: 16 },
+      { header: 'Chi Phí (VND)', key: 'spend', width: 18 },
+      { header: 'Hiển Thị', key: 'impressions', width: 14 },
+      { header: 'Clicks', key: 'clicks', width: 12 },
+      { header: 'CTR (%)', key: 'ctr', width: 12 },
+      { header: 'Tin Nhắn', key: 'messages', width: 14 },
+      { header: 'Khách Khớp SĐT', key: 'matchedLeads', width: 16 },
+      { header: 'Số Đơn CRM', key: 'orderCount', width: 14 },
+      { header: 'Doanh Thu Thật', key: 'revenue', width: 20 },
+      { header: 'ROAS Thật', key: 'roas', width: 12 },
+    ];
+
+    sheetAds.getRow(1).height = 28;
+    sheetAds.getRow(1).eachCell((cell) => {
+      cell.fill = headerFillNavy;
       cell.font = headerFont;
       cell.alignment = { vertical: 'middle', horizontal: 'center' };
     });
@@ -67,22 +177,13 @@ export class ExportService {
       },
     });
 
-    let totalSpend = 0;
-    let totalMessages = 0;
-    let totalLeads = 0;
-    let totalMatched = 0;
-    let totalOrders = 0;
-    let totalRevenue = 0;
-
     for (const ad of ads) {
       const insight = ad.insights[0] || {
         spend: 0,
         impressions: 0,
         clicks: 0,
         ctr: 0,
-        cpc: 0,
         messagingConversions: 0,
-        leads: 0,
       };
 
       const matchedCount = ad.matchedLeads.length;
@@ -90,21 +191,13 @@ export class ExportService {
       const adRevenue = validOrders.reduce((sum, o) => sum + o.revenue, 0);
       const roas = insight.spend > 0 ? parseFloat((adRevenue / insight.spend).toFixed(2)) : 0;
 
-      totalSpend += insight.spend;
-      totalMessages += insight.messagingConversions;
-      totalLeads += insight.leads;
-      totalMatched += matchedCount;
-      totalOrders += validOrders.length;
-      totalRevenue += adRevenue;
-
-      const row = sheet1.addRow({
+      const row = sheetAds.addRow({
         adId: ad.id,
         adName: ad.name,
         campaignName: ad.adSet?.campaign?.name || 'N/A',
         brand: ad.adSet?.campaign?.brand || 'Khác',
         target: ad.adSet?.campaign?.target || 'ALL',
         format: ad.adSet?.campaign?.format || 'MESS',
-        dateTag: ad.adSet?.campaign?.dateTag || '-',
         spend: insight.spend,
         impressions: insight.impressions,
         clicks: insight.clicks,
@@ -121,65 +214,49 @@ export class ExportService {
       row.getCell('revenue').numFmt = '#,##0 "VND"';
     }
 
-    // Add Summary Row
-    const summaryRow = sheet1.addRow({
-      adId: 'TỔNG CỘNG',
-      adName: '-',
-      campaignName: '-',
-      brand: '-',
-      target: '-',
-      format: '-',
-      dateTag: '-',
-      spend: totalSpend,
-      messages: totalMessages,
-      matchedLeads: totalMatched,
-      orderCount: totalOrders,
-      revenue: totalRevenue,
-      roas: totalSpend > 0 ? `${(totalRevenue / totalSpend).toFixed(2)}x` : '0x',
-    });
-    summaryRow.font = { bold: true, name: 'Segoe UI' };
-    summaryRow.getCell('spend').numFmt = '#,##0 "VND"';
-    summaryRow.getCell('revenue').numFmt = '#,##0 "VND"';
-
     // -------------------------------------------------------------
-    // SHEET 2: Danh sách Khách hàng khớp Ad ID (Customer Leads Matched)
+    // SHEET 3: Danh Sách Khách Hàng Khớp Số Điện Thoại & Đơn Hàng CRM
     // -------------------------------------------------------------
-    const sheet2 = workbook.addWorksheet('Danh Sách Khách Hàng theo Ad ID');
-    sheet2.columns = [
-      { header: 'Mã Ad (Ad ID)', key: 'adId', width: 22 },
+    const sheetLeads = workbook.addWorksheet('Khách Hàng Khớp SĐT & CRM');
+    sheetLeads.columns = [
+      { header: 'Mã Ad ID Khớp', key: 'adId', width: 22 },
       { header: 'Tên Quảng Cáo Khớp', key: 'adName', width: 32 },
-      { header: 'Họ và Tên Khách Hàng', key: 'customerName', width: 26 },
+      { header: 'Họ Tên Khách Hàng', key: 'customerName', width: 26 },
       { header: 'Số Điện Thoại', key: 'phoneNumber', width: 18 },
-      { header: 'Email', key: 'email', width: 26 },
       { header: 'Kênh Tiếp Cận', key: 'channel', width: 16 },
-      { header: 'Ngày Tạo Lead', key: 'createdTime', width: 20 },
-      { header: 'Ghi Chú / Nhu Cầu', key: 'notes', width: 35 },
+      { header: 'Thời Gian Nhắn', key: 'createdTime', width: 20 },
+      { header: 'Số Đơn Chốt CRM', key: 'orderCount', width: 16 },
+      { header: 'Tổng Doanh Thu (VND)', key: 'revenue', width: 22 },
     ];
 
-    sheet2.getRow(1).height = 28;
-    sheet2.getRow(1).eachCell((cell) => {
-      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0F766E' } }; // Teal color
+    sheetLeads.getRow(1).height = 28;
+    sheetLeads.getRow(1).eachCell((cell) => {
+      cell.fill = headerFillTeal;
       cell.font = headerFont;
       cell.alignment = { vertical: 'middle', horizontal: 'center' };
     });
 
     const leads = await this.prisma.customerLead.findMany({
-      include: { ad: true },
+      include: { ad: true, orders: true },
       orderBy: { createdTime: 'desc' },
     });
 
     for (const lead of leads) {
-      const row = sheet2.addRow({
+      const validOrders = lead.orders?.filter((o) => o.status !== 'CANCELLED') || [];
+      const leadRevenue = validOrders.reduce((sum, o) => sum + o.revenue, 0);
+
+      const row = sheetLeads.addRow({
         adId: lead.adId,
         adName: lead.ad?.name || 'N/A',
         customerName: lead.customerName,
         phoneNumber: lead.phoneNumber || 'N/A',
-        email: lead.email || 'N/A',
         channel: lead.channel,
         createdTime: new Date(lead.createdTime).toLocaleString('vi-VN'),
-        notes: lead.notes || '',
+        orderCount: validOrders.length,
+        revenue: leadRevenue,
       });
       row.height = 22;
+      row.getCell('revenue').numFmt = '#,##0 "VND"';
     }
 
     const buffer = await workbook.xlsx.writeBuffer();

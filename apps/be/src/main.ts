@@ -4,6 +4,7 @@ import { Logger } from '@nestjs/common';
 import { FbAdsService } from './fb-ads.service';
 import { MessengerService } from './messenger.service';
 import { AttributionEngineService } from './attribution-engine.service';
+import { DongaCrmService } from './donga-crm.service';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
@@ -22,12 +23,12 @@ async function bootstrap() {
   try {
     const fbAdsService = app.get(FbAdsService);
     const messengerService = app.get(MessengerService);
-    const attributionEngine = app.get(AttributionEngineService);
+    const dongaCrmService = app.get(DongaCrmService);
 
     await fbAdsService.syncFbAdsData();
     await messengerService.syncMessengerLeads();
-    await attributionEngine.seedSampleCrmOrders();
-    logger.log('✅ Khởi tạo đồng bộ dữ liệu Ads, Khớp SĐT & Doanh thu CRM ban đầu thành công!');
+    await dongaCrmService.syncDongaOrders();
+    logger.log('✅ Khởi tạo đồng bộ dữ liệu Ads, Messenger & Đơn hàng Đông Á ban đầu thành công!');
   } catch (err) {
     logger.warn(`Lỗi đồng bộ ban đầu: ${err.message}`);
   }

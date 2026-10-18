@@ -46,17 +46,21 @@ Tool Báo cáo Marketing tự động hóa toàn diện luồng dữ liệu qu�
    - Bảng 3: Danh sách Khách hàng khớp SĐT & Ad ID (Ưu tiên khách có SĐT lên đầu).
    - Bảng 4: Lịch sử đồng bộ Facebook API.
 
----
+### 5. Tích Hợp Đơn Hàng Thật Từ CRM Đông Á (`DongaCrmService` - Hoạt Động 100%)
+- **Hệ thống nguồn**: `https://donga-hethong-production.up.railway.app/api/v1/don-hang`
+- **Xác thực**: `X-API-Key: dak_sv0mjACmnhlRFlz7zpwOtYiOBc9fxytenk63Zttow80`
+- **Cơ chế đối soát**:
+  - Dữ liệu khách hàng từ API Đông Á được băm bằng thuật toán SHA-256 (`khach.ph`).
+  - Hệ thống tự động băm số điện thoại của Leads Facebook thu thập từ Messenger và Form sang SHA-256 (cả chuẩn quốc tế E.164 `84xxxxxxxxx` và nội địa `0xxxxxxxxx`).
+  - Đối soát khớp 100% không để lộ SĐT thật, gán trực tiếp doanh thu vào Ad ID và tính ROAS thực tế.
 
-## 4. Những Tính Năng Cần Hoàn Thiện Để Đáp Ứng 100% Thực Tế Vận Hành
+### 6. Báo Cáo Đa Cấp Độ (Multi-level Reporting)
+- Hỗ trợ 3 tầng phân tích:
+  - **Campaign Level**: Gom nhóm chi phí, hiển thị, clicks, số đơn và doanh thu theo Chiến dịch (`/api/reports/campaigns`).
+  - **AdSet Level**: Gom nhóm theo Nhóm quảng cáo (`/api/reports/adsets`).
+  - **Ad / Content Level**: Chi tiết từng mẫu bài viết, hình ảnh, video kèm Naming Convention (`/api/reports/ads`).
+- **Giao diện Web**: Dashboard Nuxt 3 tại `http://localhost:3000` với tab chuyển đổi tức thì, tích hợp nút "Đồng bộ Đơn Đông Á" trực tiếp.
 
-Theo sơ đồ kiến trúc, để hệ thống vận hành hoàn toàn tự động trong sản xuất, còn 3 tính năng sau:
-
-### ⚠️ 1. Nạp Dữ Liệu Đơn Hàng Thực Tế Từ CRM Nội Bộ (CRM Sync)
-- **Mục tiêu**: Thay thế dữ liệu đơn hàng mô phỏng bằng đơn hàng thật của bên anh Tuấn để tính doanh thu và ROAS thực tế.
-- **Giải pháp**:
-  - Cách 1: Thêm tính năng **"Upload file Excel / CSV Đơn Hàng"** trực tiếp trên Web Dashboard.
-  - Cách 2: Kết nối tự động qua API của hệ thống CRM bên anh Tuấn (KiotViet, Pancake Pos, Haravan, Nhanh.vn...) hoặc đồng bộ qua Google Sheet đơn hàng.
 
 ### ⚠️ 2. Kích Hoạt Webhook Facebook Realtime (Thay Vì Bấm Đồng Bộ Thủ Công)
 - **Mục tiêu**: Bắt tin nhắn và gán mã `referral.ad_id` ngay trong 1 giây khi khách vừa nhắn tin, không cần chờ quét định kỳ.

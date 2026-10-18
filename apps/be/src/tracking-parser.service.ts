@@ -5,7 +5,8 @@ export interface ParsedNamingTags {
   target?: string;      // Mục tiêu / Tập: giaotiep, LAL, 1840...
   format?: string;      // Định dạng: MESS, CVS, VIDEO, POST...
   dateTag?: string;     // Ngày tạo: 091026, 031026...
-  agent?: string;       // Nhân sự chạy: TuanTQ, NamNH...
+  agent?: string;       // Marketer chạy: Tuấn TQ, Nam NH, Linh...
+  contentTag?: string;  // Nhãn content / angle
 }
 
 @Injectable()
@@ -13,39 +14,34 @@ export class TrackingParserService {
   private readonly logger = new Logger(TrackingParserService.name);
 
   /**
-   * Bóc tách tên chiến dịch / AdSet / Ad theo quy ước Naming Convention
-   * Ví dụ:
-   * - DAH_FA_ML_Smeg_091026_Mess_3 -> Brand: Smeg, Date: 091026, Format: Mess
-   * - SMEG_TuanTQ_MESS_DATHGHD -> Brand: SMEG, Agent: TuanTQ, Format: MESS
-   * - DAH_FA_ML_Kho WMF_031026_Mess_1 -> Brand: WMF, Date: 031026, Format: Mess
-   * - BRAND_DONGA_VIDEO_DongA -> Brand: DONGA, Format: VIDEO
-   * - ALL.giaotiep.M748xM749_16917_MES_NamNH_021026 -> Target: giaotiep, Format: MES, Agent: NamNH, Date: 021026
+   * Bóc tách tên chiến dịch / AdSet / Ad theo quy ước Naming Convention Ver 2
    */
   parseCampaignName(name: string): ParsedNamingTags {
     if (!name) return {};
 
     const cleanName = name.trim();
     const result: ParsedNamingTags = {};
+    const upper = cleanName.toUpperCase();
 
     // 1. Nhận diện Brand
-    const upper = cleanName.toUpperCase();
     if (upper.includes('SMEG')) result.brand = 'Smeg';
     else if (upper.includes('WMF')) result.brand = 'WMF';
     else if (upper.includes('MEGASUN')) result.brand = 'Megasun';
-    else if (upper.includes('DONGA') || upper.includes('DONG A')) result.brand = 'Đông Á';
+    else if (upper.includes('DONGA') || upper.includes('DONG A') || upper.includes('ĐÔNG Á')) result.brand = 'Đông Á';
     else if (upper.includes('GIAOTIEP') || upper.includes('PATADO')) result.brand = 'Patado';
+    else if (upper.includes('MICHEANGELO') || upper.includes('MICHELANGELO')) result.brand = 'Michelangelo';
     else {
-      // Tách tự động từ prefix đầu tiên nếu có
       const parts = cleanName.split(/[_.\s-]+/);
-      if (parts.length > 0 && parts[0] !== 'DAH') result.brand = parts[0];
+      if (parts.length > 0 && parts[0] !== 'DAH' && parts[0] !== 'BRAND') result.brand = parts[0];
+      else result.brand = 'Khác';
     }
 
     // 2. Nhận diện Format (Hình thức chạy)
-    if (upper.includes('MESS') || upper.includes('MES')) result.format = 'Messenger';
+    if (upper.includes('MESS') || upper.includes('MES') || upper.includes('INBOX')) result.format = 'Messenger';
     else if (upper.includes('VIDEO')) result.format = 'Video';
-    else if (upper.includes('CVS')) result.format = 'Chuyển Đổi (CVS)';
-    else if (upper.includes('LEAD')) result.format = 'Lead Form';
-    else if (upper.includes('POST') || upper.includes('BAIVIET')) result.format = 'Bài Viết';
+    else if (upper.includes('CVS') || upper.includes('PURCHASE')) result.format = 'Chuyển Đổi (CVS)';
+    else if (upper.includes('LEAD') || upper.includes('FORM')) result.format = 'Lead Form';
+    else if (upper.includes('POST') || upper.includes('BAIVIET') || upper.includes('LLTT')) result.format = 'Bài Viết';
     else result.format = 'Khác';
 
     // 3. Nhận diện Ngày tháng (ddmmyy - 6 chữ số)
@@ -63,10 +59,19 @@ export class TrackingParserService {
     else if (upper.includes('JAPAN')) result.target = 'Khu vực Japan';
     else result.target = 'Đại trà (ALL)';
 
-    // 5. Nhận diện Nhân sự phụ trách (Agent)
-    if (upper.includes('TUANTQ')) result.agent = 'Tuấn TQ';
-    else if (upper.includes('NAMNH')) result.agent = 'Nam NH';
+    // 5. Nhận diện Marketer / Người phụ trách
+    if (upper.includes('TUANTQ') || upper.includes('TUAN')) result.agent = 'Tuấn TQ';
+    else if (upper.includes('NAMNH') || upper.includes('NAM')) result.agent = 'Nam NH';
+    else if (upper.includes('LINH') || upper.includes('LINHNM')) result.agent = 'Linh NM';
+    else result.agent = 'Chung';
+
+    // 6. Nhận diện Content Tag
+    const parts = cleanName.split(/[_|\-]+/).map(p => p.trim()).filter(Boolean);
+    if (parts.length > 2) {
+      result.contentTag = parts[parts.length - 1];
+    }
 
     return result;
   }
 }
+

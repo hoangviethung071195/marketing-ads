@@ -4,6 +4,7 @@ import { FbAdsService } from './fb-ads.service';
 import { MessengerService } from './messenger.service';
 import { ExportService } from './export.service';
 import { AttributionEngineService } from './attribution-engine.service';
+import { DongaCrmService } from './donga-crm.service';
 
 @Controller('api')
 export class ReportsController {
@@ -13,11 +14,22 @@ export class ReportsController {
     private messengerService: MessengerService,
     private exportService: ExportService,
     private attributionEngine: AttributionEngineService,
+    private dongaCrmService: DongaCrmService,
   ) {}
 
   @Get('reports/summary')
   async getSummary() {
     return await this.reportsService.getSummaryMetrics();
+  }
+
+  @Get('reports/campaigns')
+  async getCampaigns() {
+    return await this.reportsService.getCampaignPerformanceList();
+  }
+
+  @Get('reports/adsets')
+  async getAdSets() {
+    return await this.reportsService.getAdSetPerformanceList();
   }
 
   @Get('reports/ads')
@@ -39,11 +51,23 @@ export class ReportsController {
   async triggerFullSync() {
     const adsResult = await this.fbAdsService.syncFbAdsData();
     const messengerResult = await this.messengerService.syncMessengerLeads();
+    const crmResult = await this.dongaCrmService.syncDongaOrders();
     return {
       success: true,
-      message: 'Đã hoàn thành kích hoạt đồng bộ dữ liệu Facebook Ads & Messenger',
+      message: 'Đã hoàn thành kích hoạt đồng bộ dữ liệu Facebook Ads, Messenger và Đơn hàng Đông Á',
       ads: adsResult,
       messenger: messengerResult,
+      crm: crmResult,
+    };
+  }
+
+  @Post('sync/crm')
+  async triggerCrmSync() {
+    const result = await this.dongaCrmService.syncDongaOrders();
+    return {
+      success: true,
+      message: 'Đã hoàn thành đồng bộ đơn hàng từ Hệ thống Quản trị Đông Á!',
+      result,
     };
   }
 
@@ -57,11 +81,6 @@ export class ReportsController {
     return await this.attributionEngine.ingestCrmOrders(orders);
   }
 
-  @Post('crm/seed-sample')
-  async seedOrders() {
-    await this.attributionEngine.seedSampleCrmOrders();
-    return { success: true, message: 'Đã tạo đơn hàng mẫu CRM và gán tự động vào Ad ID thành công!' };
-  }
 
   @Get('export/excel')
   async downloadExcelReport(@Res() res: any) {

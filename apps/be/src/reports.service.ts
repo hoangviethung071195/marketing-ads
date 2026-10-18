@@ -99,9 +99,156 @@ export class ReportsService {
     });
   }
 
+  async getCampaignPerformanceList() {
+    const campaigns = await this.prisma.campaign.findMany({
+      include: {
+        adSets: {
+          include: {
+            ads: {
+              include: {
+                insights: true,
+                matchedLeads: true,
+                orders: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return campaigns.map((camp) => {
+      let spend = 0;
+      let impressions = 0;
+      let clicks = 0;
+      let messagingConversions = 0;
+      let leads = 0;
+      let matchedLeadsCount = 0;
+      let totalRevenue = 0;
+      let orderCount = 0;
+
+      for (const adset of camp.adSets) {
+        for (const ad of adset.ads) {
+          const insight = ad.insights[0] || { spend: 0, impressions: 0, clicks: 0, messagingConversions: 0, leads: 0 };
+          spend += insight.spend || 0;
+          impressions += insight.impressions || 0;
+          clicks += insight.clicks || 0;
+          messagingConversions += insight.messagingConversions || 0;
+          leads += insight.leads || 0;
+          matchedLeadsCount += ad.matchedLeads?.length || 0;
+
+          const validOrders = ad.orders?.filter((o) => o.status !== 'CANCELLED') || [];
+          orderCount += validOrders.length;
+          totalRevenue += validOrders.reduce((s, o) => s + (o.revenue || 0), 0);
+        }
+      }
+
+      const ctr = impressions > 0 ? parseFloat(((clicks / impressions) * 100).toFixed(2)) : 0;
+      const cpc = clicks > 0 ? Math.round(spend / clicks) : 0;
+      const cpl = matchedLeadsCount > 0 ? Math.round(spend / matchedLeadsCount) : 0;
+      const roas = spend > 0 ? parseFloat((totalRevenue / spend).toFixed(2)) : 0;
+      const cpa = orderCount > 0 ? Math.round(spend / orderCount) : 0;
+
+      return {
+        id: camp.id,
+        name: camp.name,
+        status: camp.status,
+        brand: camp.brand || 'Khác',
+        target: camp.target || 'ALL',
+        format: camp.format || 'MESS',
+        dateTag: camp.dateTag || '-',
+        adSetCount: camp.adSets.length,
+        spend,
+        impressions,
+        clicks,
+        ctr,
+        cpc,
+        messagingConversions,
+        leads,
+        matchedLeadsCount,
+        cpl,
+        orderCount,
+        totalRevenue,
+        roas,
+        cpa,
+      };
+    });
+  }
+
+  async getAdSetPerformanceList() {
+    const adSets = await this.prisma.adSet.findMany({
+      include: {
+        campaign: true,
+        ads: {
+          include: {
+            insights: true,
+            matchedLeads: true,
+            orders: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return adSets.map((adset) => {
+      let spend = 0;
+      let impressions = 0;
+      let clicks = 0;
+      let messagingConversions = 0;
+      let leads = 0;
+      let matchedLeadsCount = 0;
+      let totalRevenue = 0;
+      let orderCount = 0;
+
+      for (const ad of adset.ads) {
+        const insight = ad.insights[0] || { spend: 0, impressions: 0, clicks: 0, messagingConversions: 0, leads: 0 };
+        spend += insight.spend || 0;
+        impressions += insight.impressions || 0;
+        clicks += insight.clicks || 0;
+        messagingConversions += insight.messagingConversions || 0;
+        leads += insight.leads || 0;
+        matchedLeadsCount += ad.matchedLeads?.length || 0;
+
+        const validOrders = ad.orders?.filter((o) => o.status !== 'CANCELLED') || [];
+        orderCount += validOrders.length;
+        totalRevenue += validOrders.reduce((s, o) => s + (o.revenue || 0), 0);
+      }
+
+      const ctr = impressions > 0 ? parseFloat(((clicks / impressions) * 100).toFixed(2)) : 0;
+      const cpc = clicks > 0 ? Math.round(spend / clicks) : 0;
+      const cpl = matchedLeadsCount > 0 ? Math.round(spend / matchedLeadsCount) : 0;
+      const roas = spend > 0 ? parseFloat((totalRevenue / spend).toFixed(2)) : 0;
+      const cpa = orderCount > 0 ? Math.round(spend / orderCount) : 0;
+
+      return {
+        id: adset.id,
+        name: adset.name,
+        status: adset.status,
+        campaignName: adset.campaign?.name || 'N/A',
+        brand: adset.campaign?.brand || 'Khác',
+        target: adset.campaign?.target || 'ALL',
+        format: adset.campaign?.format || 'MESS',
+        adCount: adset.ads.length,
+        spend,
+        impressions,
+        clicks,
+        ctr,
+        cpc,
+        messagingConversions,
+        leads,
+        matchedLeadsCount,
+        cpl,
+        orderCount,
+        totalRevenue,
+        roas,
+        cpa,
+      };
+    });
+  }
+
   async getSyncLogs() {
     return await this.prisma.syncLog.findMany({
-      take: 15,
+      take: 20,
       orderBy: { syncedAt: 'desc' },
     });
   }
