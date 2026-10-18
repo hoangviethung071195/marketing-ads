@@ -57,10 +57,14 @@ export class FbAdsService {
         },
       });
 
-      // 2. Fetch Campaigns & Ads Insights
-      const insightsUrl = `https://graph.facebook.com/${version}/${formattedAccount}/insights?fields=ad_id,ad_name,adset_id,adset_name,campaign_id,campaign_name,impressions,clicks,spend,cpc,ctr,reach,actions&date_preset=maximum&level=ad&access_token=${accessToken}`;
+      // 2. Fetch Campaigns & Ads Insights with Daily Breakdown (time_increment=1)
+      const insightsUrl = `https://graph.facebook.com/${version}/${formattedAccount}/insights?fields=ad_id,ad_name,adset_id,adset_name,campaign_id,campaign_name,impressions,clicks,spend,cpc,ctr,reach,actions&time_increment=1&date_preset=maximum&level=ad&limit=1000&access_token=${accessToken}`;
       const insightsRes = await axios.get(insightsUrl);
       const insightsList = insightsRes.data?.data || [];
+
+      if (insightsList.length > 0) {
+        await this.prisma.adInsight.deleteMany();
+      }
 
       for (const item of insightsList) {
         const parsedTags = this.trackingParser.parseCampaignName(item.campaign_name);
@@ -122,9 +126,9 @@ export class FbAdsService {
           }
         }
 
-        const today = new Date().toISOString().split('T')[0];
+        const insightDate = item.date_start || new Date().toISOString().split('T')[0];
         await this.prisma.adInsight.upsert({
-          where: { adId_date: { adId: item.ad_id, date: today } },
+          where: { adId_date: { adId: item.ad_id, date: insightDate } },
           update: {
             impressions: parseInt(item.impressions || '0', 10),
             clicks: parseInt(item.clicks || '0', 10),
@@ -137,7 +141,7 @@ export class FbAdsService {
           },
           create: {
             adId: item.ad_id,
-            date: today,
+            date: insightDate,
             impressions: parseInt(item.impressions || '0', 10),
             clicks: parseInt(item.clicks || '0', 10),
             spend: parseFloat(item.spend || '0'),

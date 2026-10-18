@@ -50,8 +50,11 @@ export class ReportsController {
   }
 
   @Get('reports/leads')
-  async getLeads() {
-    return await this.reportsService.getMatchedLeadsList();
+  async getLeads(
+    @Query('tu_ngay') tuNgay?: string,
+    @Query('den_ngay') denNgay?: string,
+  ) {
+    return await this.reportsService.getMatchedLeadsList(tuNgay, denNgay);
   }
 
   @Get('reports/sync-logs')

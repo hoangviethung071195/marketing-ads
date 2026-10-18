@@ -95,17 +95,24 @@ export class AttributionEngineService {
       if (denNgay) orderWhere.orderDate.lte = new Date(denNgay + 'T23:59:59.999Z');
     }
 
+    const insightWhere: any = {};
+    if (tuNgay || denNgay) {
+      insightWhere.date = {};
+      if (tuNgay) insightWhere.date.gte = tuNgay;
+      if (denNgay) insightWhere.date.lte = denNgay;
+    }
+
     const ads = await this.prisma.ad.findMany({
       include: {
         adSet: { include: { campaign: true } },
-        insights: true,
+        insights: { where: insightWhere },
         matchedLeads: true,
         orders: { where: orderWhere },
       },
     });
 
     return ads.map((ad) => {
-      const spend = ad.insights[0]?.spend || 0;
+      const spend = ad.insights.reduce((sum, cur) => sum + (cur.spend || 0), 0);
       const validOrders = ad.orders.filter((o) => o.status !== 'CANCELLED');
       const totalRevenue = validOrders.reduce((sum, o) => sum + o.revenue, 0);
       const orderCount = validOrders.length;

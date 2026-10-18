@@ -55,32 +55,44 @@ export class ReportsService {
       if (denNgay) orderWhere.orderDate.lte = new Date(denNgay + 'T23:59:59.999Z');
     }
 
+    const insightWhere: any = {};
+    if (tuNgay || denNgay) {
+      insightWhere.date = {};
+      if (tuNgay) insightWhere.date.gte = tuNgay;
+      if (denNgay) insightWhere.date.lte = denNgay;
+    }
+
+    const leadWhere: any = {};
+    if (tuNgay || denNgay) {
+      leadWhere.createdTime = {};
+      if (tuNgay) leadWhere.createdTime.gte = new Date(tuNgay);
+      if (denNgay) leadWhere.createdTime.lte = new Date(denNgay + 'T23:59:59.999Z');
+    }
+
     const ads = await this.prisma.ad.findMany({
       include: {
         adSet: { include: { campaign: true } },
-        insights: true,
-        matchedLeads: true,
+        insights: { where: insightWhere },
+        matchedLeads: { where: leadWhere },
         orders: { where: orderWhere },
       },
       orderBy: { createdAt: 'desc' },
     });
 
     return ads.map((ad) => {
-      const insight = ad.insights[0] || {
-        spend: 0,
-        impressions: 0,
-        clicks: 0,
-        ctr: 0,
-        cpc: 0,
-        messagingConversions: 0,
-        leads: 0,
-      };
+      const spend = ad.insights.reduce((sum, cur) => sum + cur.spend, 0);
+      const impressions = ad.insights.reduce((sum, cur) => sum + cur.impressions, 0);
+      const clicks = ad.insights.reduce((sum, cur) => sum + cur.clicks, 0);
+      const messagingConversions = ad.insights.reduce((sum, cur) => sum + cur.messagingConversions, 0);
+      const leads = ad.insights.reduce((sum, cur) => sum + cur.leads, 0);
+      const ctr = impressions > 0 ? parseFloat(((clicks / impressions) * 100).toFixed(2)) : 0;
+      const cpc = clicks > 0 ? Math.round(spend / clicks) : 0;
 
       const matchedCount = ad.matchedLeads.length;
-      const cpl = matchedCount > 0 ? Math.round(insight.spend / matchedCount) : 0;
+      const cpl = matchedCount > 0 ? Math.round(spend / matchedCount) : 0;
       const validOrders = ad.orders.filter((o) => o.status !== 'CANCELLED');
       const totalRevenue = validOrders.reduce((sum, o) => sum + o.revenue, 0);
-      const roas = insight.spend > 0 ? parseFloat((totalRevenue / insight.spend).toFixed(2)) : 0;
+      const roas = spend > 0 ? parseFloat((totalRevenue / spend).toFixed(2)) : 0;
 
       return {
         id: ad.id,
@@ -92,13 +104,13 @@ export class ReportsService {
         format: ad.adSet?.campaign?.format || 'MESS',
         dateTag: ad.adSet?.campaign?.dateTag || '-',
         adSetName: ad.adSet?.name || 'N/A',
-        spend: insight.spend,
-        impressions: insight.impressions,
-        clicks: insight.clicks,
-        ctr: insight.ctr,
-        cpc: insight.cpc,
-        messagingConversions: insight.messagingConversions,
-        leads: insight.leads,
+        spend,
+        impressions,
+        clicks,
+        ctr,
+        cpc,
+        messagingConversions,
+        leads,
         matchedLeadsCount: matchedCount,
         cpl: cpl,
         orderCount: validOrders.length,
@@ -108,8 +120,16 @@ export class ReportsService {
     });
   }
 
-  async getMatchedLeadsList() {
+  async getMatchedLeadsList(tuNgay?: string, denNgay?: string) {
+    const leadWhere: any = {};
+    if (tuNgay || denNgay) {
+      leadWhere.createdTime = {};
+      if (tuNgay) leadWhere.createdTime.gte = new Date(tuNgay);
+      if (denNgay) leadWhere.createdTime.lte = new Date(denNgay + 'T23:59:59.999Z');
+    }
+
     return await this.prisma.customerLead.findMany({
+      where: leadWhere,
       include: {
         ad: {
           select: { id: true, name: true },
@@ -128,14 +148,28 @@ export class ReportsService {
       if (denNgay) orderWhere.orderDate.lte = new Date(denNgay + 'T23:59:59.999Z');
     }
 
+    const insightWhere: any = {};
+    if (tuNgay || denNgay) {
+      insightWhere.date = {};
+      if (tuNgay) insightWhere.date.gte = tuNgay;
+      if (denNgay) insightWhere.date.lte = denNgay;
+    }
+
+    const leadWhere: any = {};
+    if (tuNgay || denNgay) {
+      leadWhere.createdTime = {};
+      if (tuNgay) leadWhere.createdTime.gte = new Date(tuNgay);
+      if (denNgay) leadWhere.createdTime.lte = new Date(denNgay + 'T23:59:59.999Z');
+    }
+
     const campaigns = await this.prisma.campaign.findMany({
       include: {
         adSets: {
           include: {
             ads: {
               include: {
-                insights: true,
-                matchedLeads: true,
+                insights: { where: insightWhere },
+                matchedLeads: { where: leadWhere },
                 orders: { where: orderWhere },
               },
             },
@@ -157,12 +191,17 @@ export class ReportsService {
 
       for (const adset of camp.adSets) {
         for (const ad of adset.ads) {
-          const insight = ad.insights[0] || { spend: 0, impressions: 0, clicks: 0, messagingConversions: 0, leads: 0 };
-          spend += insight.spend || 0;
-          impressions += insight.impressions || 0;
-          clicks += insight.clicks || 0;
-          messagingConversions += insight.messagingConversions || 0;
-          leads += insight.leads || 0;
+          const adSpend = ad.insights.reduce((s, cur) => s + (cur.spend || 0), 0);
+          const adImpressions = ad.insights.reduce((s, cur) => s + (cur.impressions || 0), 0);
+          const adClicks = ad.insights.reduce((s, cur) => s + (cur.clicks || 0), 0);
+          const adMessaging = ad.insights.reduce((s, cur) => s + (cur.messagingConversions || 0), 0);
+          const adLeads = ad.insights.reduce((s, cur) => s + (cur.leads || 0), 0);
+
+          spend += adSpend;
+          impressions += adImpressions;
+          clicks += adClicks;
+          messagingConversions += adMessaging;
+          leads += adLeads;
           matchedLeadsCount += ad.matchedLeads?.length || 0;
 
           const validOrders = ad.orders?.filter((o) => o.status !== 'CANCELLED') || [];
@@ -211,13 +250,27 @@ export class ReportsService {
       if (denNgay) orderWhere.orderDate.lte = new Date(denNgay + 'T23:59:59.999Z');
     }
 
+    const insightWhere: any = {};
+    if (tuNgay || denNgay) {
+      insightWhere.date = {};
+      if (tuNgay) insightWhere.date.gte = tuNgay;
+      if (denNgay) insightWhere.date.lte = denNgay;
+    }
+
+    const leadWhere: any = {};
+    if (tuNgay || denNgay) {
+      leadWhere.createdTime = {};
+      if (tuNgay) leadWhere.createdTime.gte = new Date(tuNgay);
+      if (denNgay) leadWhere.createdTime.lte = new Date(denNgay + 'T23:59:59.999Z');
+    }
+
     const adSets = await this.prisma.adSet.findMany({
       include: {
         campaign: true,
         ads: {
           include: {
-            insights: true,
-            matchedLeads: true,
+            insights: { where: insightWhere },
+            matchedLeads: { where: leadWhere },
             orders: { where: orderWhere },
           },
         },
@@ -236,12 +289,17 @@ export class ReportsService {
       let orderCount = 0;
 
       for (const ad of adset.ads) {
-        const insight = ad.insights[0] || { spend: 0, impressions: 0, clicks: 0, messagingConversions: 0, leads: 0 };
-        spend += insight.spend || 0;
-        impressions += insight.impressions || 0;
-        clicks += insight.clicks || 0;
-        messagingConversions += insight.messagingConversions || 0;
-        leads += insight.leads || 0;
+        const adSpend = ad.insights.reduce((s, cur) => s + (cur.spend || 0), 0);
+        const adImpressions = ad.insights.reduce((s, cur) => s + (cur.impressions || 0), 0);
+        const adClicks = ad.insights.reduce((s, cur) => s + (cur.clicks || 0), 0);
+        const adMessaging = ad.insights.reduce((s, cur) => s + (cur.messagingConversions || 0), 0);
+        const adLeads = ad.insights.reduce((s, cur) => s + (cur.leads || 0), 0);
+
+        spend += adSpend;
+        impressions += adImpressions;
+        clicks += adClicks;
+        messagingConversions += adMessaging;
+        leads += adLeads;
         matchedLeadsCount += ad.matchedLeads?.length || 0;
 
         const validOrders = ad.orders?.filter((o) => o.status !== 'CANCELLED') || [];

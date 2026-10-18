@@ -557,7 +557,7 @@ const fetchData = async () => {
       fetch(`${apiBase}/api/reports/campaigns${qs}`).then(r => r.json()),
       fetch(`${apiBase}/api/reports/adsets${qs}`).then(r => r.json()),
       fetch(`${apiBase}/api/reports/ads${qs}`).then(r => r.json()),
-      fetch(`${apiBase}/api/reports/leads`).then(r => r.json()),
+      fetch(`${apiBase}/api/reports/leads${qs}`).then(r => r.json()),
       fetch(`${apiBase}/api/reports/sync-logs`).then(r => r.json()),
       fetch(`${apiBase}/api/reports/attribution${qs}`).then(r => r.json()),
     ])
