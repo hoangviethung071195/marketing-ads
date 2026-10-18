@@ -87,13 +87,20 @@ export class AttributionEngineService {
   /**
    * Tính toán chỉ số ROAS & Doanh thu theo từng Ad ID
    */
-  async getAdAttributionReport() {
+  async getAdAttributionReport(tuNgay?: string, denNgay?: string) {
+    const orderWhere: any = {};
+    if (tuNgay || denNgay) {
+      orderWhere.orderDate = {};
+      if (tuNgay) orderWhere.orderDate.gte = new Date(tuNgay);
+      if (denNgay) orderWhere.orderDate.lte = new Date(denNgay + 'T23:59:59.999Z');
+    }
+
     const ads = await this.prisma.ad.findMany({
       include: {
         adSet: { include: { campaign: true } },
         insights: true,
         matchedLeads: true,
-        orders: true,
+        orders: { where: orderWhere },
       },
     });
 

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Res } from '@nestjs/common';
+import { Controller, Get, Post, Body, Res, Query } from '@nestjs/common';
 import { ReportsService } from './reports.service';
 import { FbAdsService } from './fb-ads.service';
 import { MessengerService } from './messenger.service';
@@ -18,23 +18,35 @@ export class ReportsController {
   ) {}
 
   @Get('reports/summary')
-  async getSummary() {
-    return await this.reportsService.getSummaryMetrics();
+  async getSummary(
+    @Query('tu_ngay') tuNgay?: string,
+    @Query('den_ngay') denNgay?: string,
+  ) {
+    return await this.reportsService.getSummaryMetrics(tuNgay, denNgay);
   }
 
   @Get('reports/campaigns')
-  async getCampaigns() {
-    return await this.reportsService.getCampaignPerformanceList();
+  async getCampaigns(
+    @Query('tu_ngay') tuNgay?: string,
+    @Query('den_ngay') denNgay?: string,
+  ) {
+    return await this.reportsService.getCampaignPerformanceList(tuNgay, denNgay);
   }
 
   @Get('reports/adsets')
-  async getAdSets() {
-    return await this.reportsService.getAdSetPerformanceList();
+  async getAdSets(
+    @Query('tu_ngay') tuNgay?: string,
+    @Query('den_ngay') denNgay?: string,
+  ) {
+    return await this.reportsService.getAdSetPerformanceList(tuNgay, denNgay);
   }
 
   @Get('reports/ads')
-  async getAds() {
-    return await this.reportsService.getAdPerformanceList();
+  async getAds(
+    @Query('tu_ngay') tuNgay?: string,
+    @Query('den_ngay') denNgay?: string,
+  ) {
+    return await this.reportsService.getAdPerformanceList(tuNgay, denNgay);
   }
 
   @Get('reports/leads')
@@ -72,8 +84,11 @@ export class ReportsController {
   }
 
   @Get('reports/attribution')
-  async getAttribution() {
-    return await this.attributionEngine.getAdAttributionReport();
+  async getAttribution(
+    @Query('tu_ngay') tuNgay?: string,
+    @Query('den_ngay') denNgay?: string,
+  ) {
+    return await this.attributionEngine.getAdAttributionReport(tuNgay, denNgay);
   }
 
   @Post('crm/orders')

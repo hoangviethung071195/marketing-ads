@@ -5,9 +5,23 @@ import { PrismaService } from './prisma.service';
 export class ReportsService {
   constructor(private prisma: PrismaService) {}
 
-  async getSummaryMetrics() {
-    const insights = await this.prisma.adInsight.findMany();
-    const leads = await this.prisma.customerLead.findMany();
+  async getSummaryMetrics(tuNgay?: string, denNgay?: string) {
+    const insightWhere: any = {};
+    if (tuNgay || denNgay) {
+      insightWhere.date = {};
+      if (tuNgay) insightWhere.date.gte = tuNgay;
+      if (denNgay) insightWhere.date.lte = denNgay;
+    }
+
+    const leadWhere: any = {};
+    if (tuNgay || denNgay) {
+      leadWhere.createdTime = {};
+      if (tuNgay) leadWhere.createdTime.gte = new Date(tuNgay);
+      if (denNgay) leadWhere.createdTime.lte = new Date(denNgay + 'T23:59:59.999Z');
+    }
+
+    const insights = await this.prisma.adInsight.findMany({ where: insightWhere });
+    const leads = await this.prisma.customerLead.findMany({ where: leadWhere });
 
     const totalSpend = insights.reduce((acc, cur) => acc + cur.spend, 0);
     const totalImpressions = insights.reduce((acc, cur) => acc + cur.impressions, 0);
@@ -33,13 +47,20 @@ export class ReportsService {
     };
   }
 
-  async getAdPerformanceList() {
+  async getAdPerformanceList(tuNgay?: string, denNgay?: string) {
+    const orderWhere: any = {};
+    if (tuNgay || denNgay) {
+      orderWhere.orderDate = {};
+      if (tuNgay) orderWhere.orderDate.gte = new Date(tuNgay);
+      if (denNgay) orderWhere.orderDate.lte = new Date(denNgay + 'T23:59:59.999Z');
+    }
+
     const ads = await this.prisma.ad.findMany({
       include: {
         adSet: { include: { campaign: true } },
         insights: true,
         matchedLeads: true,
-        orders: true,
+        orders: { where: orderWhere },
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -99,7 +120,14 @@ export class ReportsService {
     });
   }
 
-  async getCampaignPerformanceList() {
+  async getCampaignPerformanceList(tuNgay?: string, denNgay?: string) {
+    const orderWhere: any = {};
+    if (tuNgay || denNgay) {
+      orderWhere.orderDate = {};
+      if (tuNgay) orderWhere.orderDate.gte = new Date(tuNgay);
+      if (denNgay) orderWhere.orderDate.lte = new Date(denNgay + 'T23:59:59.999Z');
+    }
+
     const campaigns = await this.prisma.campaign.findMany({
       include: {
         adSets: {
@@ -108,7 +136,7 @@ export class ReportsService {
               include: {
                 insights: true,
                 matchedLeads: true,
-                orders: true,
+                orders: { where: orderWhere },
               },
             },
           },
@@ -175,7 +203,14 @@ export class ReportsService {
     });
   }
 
-  async getAdSetPerformanceList() {
+  async getAdSetPerformanceList(tuNgay?: string, denNgay?: string) {
+    const orderWhere: any = {};
+    if (tuNgay || denNgay) {
+      orderWhere.orderDate = {};
+      if (tuNgay) orderWhere.orderDate.gte = new Date(tuNgay);
+      if (denNgay) orderWhere.orderDate.lte = new Date(denNgay + 'T23:59:59.999Z');
+    }
+
     const adSets = await this.prisma.adSet.findMany({
       include: {
         campaign: true,
@@ -183,7 +218,7 @@ export class ReportsService {
           include: {
             insights: true,
             matchedLeads: true,
-            orders: true,
+            orders: { where: orderWhere },
           },
         },
       },

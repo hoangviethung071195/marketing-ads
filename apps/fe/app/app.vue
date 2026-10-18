@@ -83,6 +83,38 @@
       </div>
     </section>
 
+    <!-- Date Range Filter Bar (Default 90 days) -->
+    <section class="card filter-card">
+      <div class="filter-left">
+        <div class="filter-label-group">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <span class="font-bold">Khoảng Thời Gian:</span>
+        </div>
+
+        <div class="quick-presets">
+          <button class="preset-btn" :class="{ active: selectedPreset === '90d' }" @click="applyPreset('90d')">90 ngày gần nhất (Mặc định)</button>
+          <button class="preset-btn" :class="{ active: selectedPreset === '30d' }" @click="applyPreset('30d')">30 ngày qua</button>
+          <button class="preset-btn" :class="{ active: selectedPreset === '7d' }" @click="applyPreset('7d')">7 ngày qua</button>
+          <button class="preset-btn" :class="{ active: selectedPreset === 'all' }" @click="applyPreset('all')">Toàn thời gian</button>
+        </div>
+      </div>
+
+      <div class="date-inputs">
+        <div class="input-item">
+          <label>Từ ngày:</label>
+          <input type="date" v-model="startDate" @change="onCustomDateChange" class="date-picker-input" />
+        </div>
+        <div class="input-item">
+          <label>Đến ngày:</label>
+          <input type="date" v-model="endDate" @change="onCustomDateChange" class="date-picker-input" />
+        </div>
+        <button class="btn btn-secondary btn-sm" @click="fetchData">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          Lọc
+        </button>
+      </div>
+    </section>
+
     <!-- Controls Bar: Dimension Selector & Search -->
     <div class="controls-bar">
       <!-- Main Navigation Tabs -->
@@ -423,6 +455,39 @@ const searchQuery = ref('')
 const isSyncingAll = ref(false)
 const isSyncingCrm = ref(false)
 
+// Date Range Filter State (Default 90 days)
+const selectedPreset = ref('90d')
+const formatISODate = (d) => d.toISOString().slice(0, 10)
+
+const today = new Date()
+const defaultStart = new Date(today.getTime() - 90 * 24 * 60 * 60 * 1000)
+
+const startDate = ref(formatISODate(defaultStart))
+const endDate = ref(formatISODate(today))
+
+const applyPreset = (preset) => {
+  selectedPreset.value = preset
+  const now = new Date()
+  endDate.value = formatISODate(now)
+
+  if (preset === '90d') {
+    startDate.value = formatISODate(new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000))
+  } else if (preset === '30d') {
+    startDate.value = formatISODate(new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000))
+  } else if (preset === '7d') {
+    startDate.value = formatISODate(new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000))
+  } else if (preset === 'all') {
+    startDate.value = ''
+    endDate.value = ''
+  }
+  fetchData()
+}
+
+const onCustomDateChange = () => {
+  selectedPreset.value = 'custom'
+  fetchData()
+}
+
 const summary = ref({
   totalSpend: 0,
   totalImpressions: 0,
@@ -482,14 +547,19 @@ const sortedLeads = computed(() => {
 
 const fetchData = async () => {
   try {
+    const queryParams = new URLSearchParams()
+    if (startDate.value) queryParams.set('tu_ngay', startDate.value)
+    if (endDate.value) queryParams.set('den_ngay', endDate.value)
+    const qs = queryParams.toString() ? `?${queryParams.toString()}` : ''
+
     const [resSummary, resCamps, resAdSets, resAds, resLeads, resLogs, resAtt] = await Promise.all([
-      fetch(`${apiBase}/api/reports/summary`).then(r => r.json()),
-      fetch(`${apiBase}/api/reports/campaigns`).then(r => r.json()),
-      fetch(`${apiBase}/api/reports/adsets`).then(r => r.json()),
-      fetch(`${apiBase}/api/reports/ads`).then(r => r.json()),
+      fetch(`${apiBase}/api/reports/summary${qs}`).then(r => r.json()),
+      fetch(`${apiBase}/api/reports/campaigns${qs}`).then(r => r.json()),
+      fetch(`${apiBase}/api/reports/adsets${qs}`).then(r => r.json()),
+      fetch(`${apiBase}/api/reports/ads${qs}`).then(r => r.json()),
       fetch(`${apiBase}/api/reports/leads`).then(r => r.json()),
       fetch(`${apiBase}/api/reports/sync-logs`).then(r => r.json()),
-      fetch(`${apiBase}/api/reports/attribution`).then(r => r.json()),
+      fetch(`${apiBase}/api/reports/attribution${qs}`).then(r => r.json()),
     ])
 
     summary.value = resSummary
@@ -727,6 +797,96 @@ h1 {
   background: linear-gradient(135deg, #a78bfa, #818cf8);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+}
+
+/* Date Filter Card */
+.filter-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 24px;
+  padding: 14px 20px;
+  flex-wrap: wrap;
+}
+
+.filter-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.filter-label-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--cyan);
+  font-size: 14px;
+}
+
+.quick-presets {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.preset-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--card-border);
+  color: var(--text-muted);
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.preset-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-main);
+}
+
+.preset-btn.active {
+  background: rgba(6, 182, 212, 0.15);
+  border-color: var(--cyan);
+  color: var(--cyan);
+  font-weight: 700;
+}
+
+.date-inputs {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.input-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.date-picker-input {
+  background: #0b0f19;
+  border: 1px solid var(--card-border);
+  color: white;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  outline: none;
+}
+
+.date-picker-input:focus {
+  border-color: var(--cyan);
+}
+
+.btn-sm {
+  padding: 7px 14px;
+  font-size: 12px;
 }
 
 /* Controls Bar */
