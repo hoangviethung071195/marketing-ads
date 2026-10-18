@@ -18,9 +18,15 @@ export class FbAdsService {
    * Đồng bộ dữ liệu Ads từ Facebook Graph API (hoặc Mock Data nếu chưa điền Token)
    */
   async syncFbAdsData() {
-    const accessToken = this.configService.get<string>('FB_ACCESS_TOKEN');
-    const adAccountId = this.configService.get<string>('FB_AD_ACCOUNT_ID');
-    const graphVersion = this.configService.get<string>('FB_GRAPH_VERSION', 'v19.0');
+    const accessToken =
+      this.configService.get<string>('FB_ACCESS_TOKEN') ||
+      'EAAbxBFn6GF4BSnZCvHPuJF4O4wycvFR1ZANxx6TZAjiNq3I0hKlg50oaZBHFaBPJxsdOHxt0ZCgczivIkgDpDEVax8LsjQVBhXJu7voGC7ykoZAS9JeT4T1uG79ZCCss3C770vEDiloHQMuypvbV8mwK91v0PJqTFuW5RdoBDCCJWpaWCej6zvLFeI20hfk';
+    const adAccountId =
+      this.configService.get<string>('FB_AD_ACCOUNT_ID') ||
+      'act_37100244396233479';
+    const graphVersion =
+      this.configService.get<string>('FB_GRAPH_VERSION') ||
+      'v19.0';
 
     const isTokenConfigured = accessToken && !accessToken.includes('your_') && adAccountId && !adAccountId.includes('your_');
 

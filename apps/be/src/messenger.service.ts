@@ -18,9 +18,15 @@ export class MessengerService {
    * Đồng bộ danh sách Customer Leads & Messenger Conversations và khớp ad_id
    */
   async syncMessengerLeads() {
-    const pageAccessToken = this.configService.get<string>('FB_PAGE_ACCESS_TOKEN');
-    const pageId = this.configService.get<string>('FB_PAGE_ID');
-    const graphVersion = this.configService.get<string>('FB_GRAPH_VERSION', 'v19.0');
+    const pageAccessToken =
+      this.configService.get<string>('FB_PAGE_ACCESS_TOKEN') ||
+      'EAAbxBFn6GF4BSrR7NktlNaOk8tRrax7RSEOwXZBnamtdLNZCXWx8X6cRqo4uJ9hTVAuSsLbTZBfkQr1AiGZAKkKpLWMjYcZA4uSkqUkCFsHpItcwvwShmxcfcq9C0IQ1NmXZB3NPf9ZCQxR0UVMkj51jd4Fnsxe2ybKZBNCWNvKhsSdZCmP3kvZCAWtjAgKbzc1m8hCJ9VZCzvw';
+    const pageId =
+      this.configService.get<string>('FB_PAGE_ID') ||
+      '1135433796327068';
+    const graphVersion =
+      this.configService.get<string>('FB_GRAPH_VERSION') ||
+      'v19.0';
 
     const isPageConfigured = pageAccessToken && !pageAccessToken.includes('your_') && pageId && !pageId.includes('your_');
 
