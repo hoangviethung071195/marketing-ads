@@ -17,6 +17,13 @@
       </div>
 
       <div class="actions">
+        <!-- Nút chuyển đổi Light / Dark Mode -->
+        <button class="btn btn-secondary theme-toggle-btn" @click="toggleTheme" :title="isLightMode ? 'Chuyển sang giao diện Dark Mode' : 'Chuyển sang giao diện Light Mode'">
+          <svg v-if="isLightMode" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+          <svg v-else xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+          {{ isLightMode ? 'Dark Mode' : 'Light Mode' }}
+        </button>
+
         <button class="btn btn-secondary" @click="syncCrmData" :disabled="isSyncingCrm">
           <span v-if="isSyncingCrm" class="spinner"></span>
           <svg v-else xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
@@ -92,9 +99,13 @@
         </div>
 
         <div class="quick-presets">
-          <button class="preset-btn" :class="{ active: selectedPreset === '90d' }" @click="applyPreset('90d')">90 ngày gần nhất (Mặc định)</button>
-          <button class="preset-btn" :class="{ active: selectedPreset === '30d' }" @click="applyPreset('30d')">30 ngày qua</button>
+          <button class="preset-btn" :class="{ active: selectedPreset === 'this_week' }" @click="applyPreset('this_week')">Tuần này</button>
+          <button class="preset-btn" :class="{ active: selectedPreset === 'last_week' }" @click="applyPreset('last_week')">Tuần trước</button>
+          <button class="preset-btn" :class="{ active: selectedPreset === 'this_month' }" @click="applyPreset('this_month')">Tháng này</button>
+          <button class="preset-btn" :class="{ active: selectedPreset === 'last_month' }" @click="applyPreset('last_month')">Tháng trước</button>
           <button class="preset-btn" :class="{ active: selectedPreset === '7d' }" @click="applyPreset('7d')">7 ngày qua</button>
+          <button class="preset-btn" :class="{ active: selectedPreset === '30d' }" @click="applyPreset('30d')">30 ngày qua</button>
+          <button class="preset-btn" :class="{ active: selectedPreset === '90d' }" @click="applyPreset('90d')">90 ngày</button>
           <button class="preset-btn" :class="{ active: selectedPreset === 'all' }" @click="applyPreset('all')">Toàn thời gian</button>
         </div>
       </div>
@@ -158,26 +169,54 @@
         <table class="data-table">
           <thead>
             <tr>
-              <th>Tên Chiến Dịch</th>
-              <th>Nhãn Hàng</th>
+              <th @click="handleSort('campaigns', 'name')" class="sortable-th">
+                Tên Chiến Dịch <span class="sort-icon">{{ getSortIcon('campaigns', 'name') }}</span>
+              </th>
+              <th>Trạng Thái</th>
+              <th @click="handleSort('campaigns', 'brand')" class="sortable-th">
+                Nhãn Hàng <span class="sort-icon">{{ getSortIcon('campaigns', 'brand') }}</span>
+              </th>
               <th>Định Dạng</th>
               <th>Target</th>
-              <th>Số Nhóm</th>
-              <th>Chi Phí (VND)</th>
-              <th>Hiển Thị</th>
-              <th>Clicks (CTR)</th>
-              <th>Tin Nhắn</th>
-              <th>Khách Khớp SĐT</th>
-              <th>Số Đơn CRM</th>
-              <th>Doanh Thu Đơn</th>
-              <th>ROAS</th>
+              <th @click="handleSort('campaigns', 'adSetCount')" class="sortable-th">
+                Số Nhóm <span class="sort-icon">{{ getSortIcon('campaigns', 'adSetCount') }}</span>
+              </th>
+              <th @click="handleSort('campaigns', 'spend')" class="sortable-th">
+                Chi Phí (VND) <span class="sort-icon">{{ getSortIcon('campaigns', 'spend') }}</span>
+              </th>
+              <th @click="handleSort('campaigns', 'impressions')" class="sortable-th">
+                Hiển Thị <span class="sort-icon">{{ getSortIcon('campaigns', 'impressions') }}</span>
+              </th>
+              <th @click="handleSort('campaigns', 'clicks')" class="sortable-th">
+                Clicks (CTR) <span class="sort-icon">{{ getSortIcon('campaigns', 'clicks') }}</span>
+              </th>
+              <th @click="handleSort('campaigns', 'messagingConversions')" class="sortable-th">
+                Tin Nhắn <span class="sort-icon">{{ getSortIcon('campaigns', 'messagingConversions') }}</span>
+              </th>
+              <th @click="handleSort('campaigns', 'matchedLeadsCount')" class="sortable-th">
+                Khách Khớp SĐT <span class="sort-icon">{{ getSortIcon('campaigns', 'matchedLeadsCount') }}</span>
+              </th>
+              <th @click="handleSort('campaigns', 'orderCount')" class="sortable-th">
+                Số Đơn CRM <span class="sort-icon">{{ getSortIcon('campaigns', 'orderCount') }}</span>
+              </th>
+              <th @click="handleSort('campaigns', 'totalRevenue')" class="sortable-th">
+                Doanh Thu Đơn <span class="sort-icon">{{ getSortIcon('campaigns', 'totalRevenue') }}</span>
+              </th>
+              <th @click="handleSort('campaigns', 'roas')" class="sortable-th">
+                ROAS <span class="sort-icon">{{ getSortIcon('campaigns', 'roas') }}</span>
+              </th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="c in filteredCampaigns" :key="c.id">
               <td>
-                <div class="font-bold text-white">{{ c.name }}</div>
+                <div class="font-bold text-highlight">{{ c.name }}</div>
                 <div class="font-mono text-dim text-xs">ID: {{ c.id }}</div>
+              </td>
+              <td>
+                <span :class="['badge', c.status === 'ACTIVE' ? 'badge-success' : 'badge-dim']">
+                  {{ c.status === 'ACTIVE' ? 'BẬT' : 'TẮT' }}
+                </span>
               </td>
               <td><span class="badge badge-blue">{{ c.brand }}</span></td>
               <td><span class="badge badge-amber">{{ c.format }}</span></td>
@@ -197,7 +236,7 @@
               </td>
             </tr>
             <tr v-if="filteredCampaigns.length === 0">
-              <td colspan="13" class="empty-cell">Không tìm thấy chiến dịch nào phù hợp.</td>
+              <td colspan="14" class="empty-cell">Không tìm thấy chiến dịch nào phù hợp.</td>
             </tr>
           </tbody>
         </table>
@@ -218,23 +257,43 @@
         <table class="data-table">
           <thead>
             <tr>
-              <th>Tên Nhóm (AdSet)</th>
+              <th @click="handleSort('adsets', 'name')" class="sortable-th">
+                Tên Nhóm (AdSet) <span class="sort-icon">{{ getSortIcon('adsets', 'name') }}</span>
+              </th>
               <th>Thuộc Chiến Dịch</th>
-              <th>Nhãn Hàng</th>
-              <th>Số Mẫu Ads</th>
-              <th>Chi Phí (VND)</th>
-              <th>Hiển Thị</th>
-              <th>Clicks (CTR)</th>
-              <th>Tin Nhắn</th>
-              <th>Số Đơn CRM</th>
-              <th>Doanh Thu Đơn</th>
-              <th>ROAS</th>
+              <th @click="handleSort('adsets', 'brand')" class="sortable-th">
+                Nhãn Hàng <span class="sort-icon">{{ getSortIcon('adsets', 'brand') }}</span>
+              </th>
+              <th @click="handleSort('adsets', 'adCount')" class="sortable-th">
+                Số Mẫu Ads <span class="sort-icon">{{ getSortIcon('adsets', 'adCount') }}</span>
+              </th>
+              <th @click="handleSort('adsets', 'spend')" class="sortable-th">
+                Chi Phí (VND) <span class="sort-icon">{{ getSortIcon('adsets', 'spend') }}</span>
+              </th>
+              <th @click="handleSort('adsets', 'impressions')" class="sortable-th">
+                Hiển Thị <span class="sort-icon">{{ getSortIcon('adsets', 'impressions') }}</span>
+              </th>
+              <th @click="handleSort('adsets', 'clicks')" class="sortable-th">
+                Clicks (CTR) <span class="sort-icon">{{ getSortIcon('adsets', 'clicks') }}</span>
+              </th>
+              <th @click="handleSort('adsets', 'messagingConversions')" class="sortable-th">
+                Tin Nhắn <span class="sort-icon">{{ getSortIcon('adsets', 'messagingConversions') }}</span>
+              </th>
+              <th @click="handleSort('adsets', 'orderCount')" class="sortable-th">
+                Số Đơn CRM <span class="sort-icon">{{ getSortIcon('adsets', 'orderCount') }}</span>
+              </th>
+              <th @click="handleSort('adsets', 'totalRevenue')" class="sortable-th">
+                Doanh Thu Đơn <span class="sort-icon">{{ getSortIcon('adsets', 'totalRevenue') }}</span>
+              </th>
+              <th @click="handleSort('adsets', 'roas')" class="sortable-th">
+                ROAS <span class="sort-icon">{{ getSortIcon('adsets', 'roas') }}</span>
+              </th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="as in filteredAdSets" :key="as.id">
               <td>
-                <div class="font-bold text-white">{{ as.name }}</div>
+                <div class="font-bold text-highlight">{{ as.name }}</div>
                 <div class="font-mono text-dim text-xs">ID: {{ as.id }}</div>
               </td>
               <td class="text-dim text-xs max-w-xs">{{ as.campaignName }}</td>
@@ -267,31 +326,59 @@
           <h3>Hiệu Suất Từng Mẫu Quảng Cáo & Naming Tags</h3>
           <p class="table-sub">Bóc tách sâu: Brand, Target, Format, Date, Chi phí, Khách khớp SĐT và Doanh thu thực</p>
         </div>
-        <span class="badge badge-blue">{{ filteredAds.length }} Mẫu Ads</span>
+        
+        <!-- Toggle Nhóm theo Tên Mẫu Ads Content -->
+        <div class="view-mode-toggle">
+          <button class="preset-btn" :class="{ active: adViewMode === 'detail' }" @click="adViewMode = 'detail'">
+            Từng mã Ad ID (Chi tiết)
+          </button>
+          <button class="preset-btn" :class="{ active: adViewMode === 'grouped' }" @click="adViewMode = 'grouped'">
+            ✨ Gộp theo Tên Mẫu Content (Sum)
+          </button>
+          <span class="badge badge-blue">{{ filteredAds.length }} {{ adViewMode === 'grouped' ? 'Mẫu Content' : 'Mẫu Ads' }}</span>
+        </div>
       </div>
 
       <div class="table-wrapper">
         <table class="data-table">
           <thead>
             <tr>
-              <th>Mã Ad ID</th>
-              <th>Tên Quảng Cáo</th>
+              <th v-if="adViewMode === 'detail'">Mã Ad ID</th>
+              <th @click="handleSort('ads', 'name')" class="sortable-th">
+                {{ adViewMode === 'grouped' ? 'Tên Mẫu Quảng Cáo (Gộp chung)' : 'Tên Quảng Cáo' }} <span class="sort-icon">{{ getSortIcon('ads', 'name') }}</span>
+              </th>
+              <th v-if="adViewMode === 'grouped'">Số Bản Chạy</th>
               <th>Nhãn Hàng</th>
               <th>Định Dạng</th>
               <th>Target</th>
-              <th>Chi Phí (VND)</th>
-              <th>Hiển Thị</th>
-              <th>Clicks (CTR)</th>
-              <th>Khách Khớp SĐT</th>
-              <th>Số Đơn CRM</th>
-              <th>Doanh Thu Đơn</th>
-              <th>ROAS</th>
+              <th @click="handleSort('ads', 'spend')" class="sortable-th">
+                Chi Phí (VND) <span class="sort-icon">{{ getSortIcon('ads', 'spend') }}</span>
+              </th>
+              <th @click="handleSort('ads', 'impressions')" class="sortable-th">
+                Hiển Thị <span class="sort-icon">{{ getSortIcon('ads', 'impressions') }}</span>
+              </th>
+              <th @click="handleSort('ads', 'clicks')" class="sortable-th">
+                Clicks (CTR) <span class="sort-icon">{{ getSortIcon('ads', 'clicks') }}</span>
+              </th>
+              <th @click="handleSort('ads', 'matchedLeadsCount')" class="sortable-th">
+                Khách Khớp SĐT <span class="sort-icon">{{ getSortIcon('ads', 'matchedLeadsCount') }}</span>
+              </th>
+              <th @click="handleSort('ads', 'orderCount')" class="sortable-th">
+                Số Đơn CRM <span class="sort-icon">{{ getSortIcon('ads', 'orderCount') }}</span>
+              </th>
+              <th @click="handleSort('ads', 'totalRevenue')" class="sortable-th">
+                Doanh Thu Đơn <span class="sort-icon">{{ getSortIcon('ads', 'totalRevenue') }}</span>
+              </th>
+              <th @click="handleSort('ads', 'roas')" class="sortable-th">
+                ROAS <span class="sort-icon">{{ getSortIcon('ads', 'roas') }}</span>
+              </th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="ad in filteredAds" :key="ad.id">
-              <td class="font-mono text-cyan">{{ ad.id }}</td>
+              <td v-if="adViewMode === 'detail'" class="font-mono text-cyan">{{ ad.id }}</td>
               <td class="font-bold">{{ ad.name }}</td>
+              <td v-if="adViewMode === 'grouped'" class="font-mono"><span class="badge badge-dim">{{ ad.adCount }} ads</span></td>
               <td><span class="badge badge-blue">{{ ad.brand || 'Khác' }}</span></td>
               <td><span class="badge badge-amber">{{ ad.format || 'MESS' }}</span></td>
               <td><span class="text-xs">{{ ad.target || 'ALL' }}</span></td>
@@ -310,7 +397,7 @@
               </td>
             </tr>
             <tr v-if="filteredAds.length === 0">
-              <td colspan="12" class="empty-cell">Chưa có dữ liệu quảng cáo.</td>
+              <td :colspan="adViewMode === 'grouped' ? 12 : 12" class="empty-cell">Chưa có dữ liệu quảng cáo.</td>
             </tr>
           </tbody>
         </table>
@@ -324,25 +411,50 @@
           <h3>Bảng Đối Soát Doanh Thu & ROAS Thật Từ CRM Đông Á</h3>
           <p class="table-sub">Nối tự động: Ad ID ↔ Messenger PSID ↔ SĐT Khách Hàng ↔ Đơn Hàng Thực Tế Hệ Thống Đông Á</p>
         </div>
+
+        <!-- Bộ chọn Attribution Model (First click, Last click 7d, 30d) theo yêu cầu Tuấn -->
+        <div class="attribution-model-selector">
+          <label class="font-bold text-xs text-muted">Mô hình Attribution:</label>
+          <div class="quick-presets">
+            <button class="preset-btn" :class="{ active: attributionModel === 'last_click' }" @click="setAttributionModel('last_click')">Last Click (Chuẩn)</button>
+            <button class="preset-btn" :class="{ active: attributionModel === 'last_click_7d' }" @click="setAttributionModel('last_click_7d')">Last Click 7 ngày</button>
+            <button class="preset-btn" :class="{ active: attributionModel === 'last_click_30d' }" @click="setAttributionModel('last_click_30d')">Last Click 30 ngày</button>
+            <button class="preset-btn" :class="{ active: attributionModel === 'first_click' }" @click="setAttributionModel('first_click')">First Click</button>
+          </div>
+        </div>
       </div>
 
       <div class="table-wrapper">
         <table class="data-table">
           <thead>
             <tr>
-              <th>Mã Ad ID</th>
-              <th>Tên Quảng Cáo</th>
+              <th @click="handleSort('attribution', 'adId')" class="sortable-th">
+                Mã Ad ID <span class="sort-icon">{{ getSortIcon('attribution', 'adId') }}</span>
+              </th>
+              <th @click="handleSort('attribution', 'adName')" class="sortable-th">
+                Tên Quảng Cáo <span class="sort-icon">{{ getSortIcon('attribution', 'adName') }}</span>
+              </th>
               <th>Thuộc Chiến Dịch</th>
               <th>Nhãn Hàng</th>
-              <th>Chi Phí Ads</th>
-              <th>Số Đơn Chốt</th>
-              <th>Doanh Thu Đơn Hàng</th>
-              <th>ROAS Thật</th>
-              <th>CPA (Chi phí/Đơn)</th>
+              <th @click="handleSort('attribution', 'spend')" class="sortable-th">
+                Chi Phí Ads <span class="sort-icon">{{ getSortIcon('attribution', 'spend') }}</span>
+              </th>
+              <th @click="handleSort('attribution', 'orderCount')" class="sortable-th">
+                Số Đơn Chốt <span class="sort-icon">{{ getSortIcon('attribution', 'orderCount') }}</span>
+              </th>
+              <th @click="handleSort('attribution', 'totalRevenue')" class="sortable-th">
+                Doanh Thu Đơn Hàng <span class="sort-icon">{{ getSortIcon('attribution', 'totalRevenue') }}</span>
+              </th>
+              <th @click="handleSort('attribution', 'roas')" class="sortable-th">
+                ROAS Thật <span class="sort-icon">{{ getSortIcon('attribution', 'roas') }}</span>
+              </th>
+              <th @click="handleSort('attribution', 'cpa')" class="sortable-th">
+                CPA (Chi phí/Đơn) <span class="sort-icon">{{ getSortIcon('attribution', 'cpa') }}</span>
+              </th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="att in attributionList" :key="att.adId">
+            <tr v-for="att in filteredAttribution" :key="att.adId">
               <td class="font-mono text-cyan">{{ att.adId }}</td>
               <td class="font-bold">{{ att.adName }}</td>
               <td class="text-dim text-xs">{{ att.campaignName }}</td>
@@ -356,6 +468,9 @@
                 </span>
               </td>
               <td class="font-mono">{{ formatCurrency(att.cpa) }}</td>
+            </tr>
+            <tr v-if="filteredAttribution.length === 0">
+              <td colspan="9" class="empty-cell">Không tìm thấy dữ liệu đối soát nào.</td>
             </tr>
           </tbody>
         </table>
@@ -455,9 +570,39 @@ const searchQuery = ref('')
 const isSyncingAll = ref(false)
 const isSyncingCrm = ref(false)
 
-// Date Range Filter State (Default 90 days)
+// 1. Light Mode / Dark Mode Theme
+const isLightMode = ref(false)
+const toggleTheme = () => {
+  isLightMode.value = !isLightMode.value
+  if (process.client) {
+    if (isLightMode.value) {
+      document.body.classList.add('light-theme')
+      localStorage.setItem('tool_marketing_theme', 'light')
+    } else {
+      document.body.classList.remove('light-theme')
+      localStorage.setItem('tool_marketing_theme', 'dark')
+    }
+  }
+}
+
+// 2. View Mode cho Tab Ads (Chi tiết Ad ID vs Gộp chung Content)
+const adViewMode = ref('detail') // 'detail' | 'grouped'
+
+// 3. Attribution Model Selector
+const attributionModel = ref('last_click') // 'last_click' | 'last_click_7d' | 'last_click_30d' | 'first_click'
+const setAttributionModel = (model) => {
+  attributionModel.value = model
+  fetchData()
+}
+
+// 4. Date Range Filter State & Presets
 const selectedPreset = ref('90d')
-const formatISODate = (d) => d.toISOString().slice(0, 10)
+const formatISODate = (d) => {
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
 
 const today = new Date()
 const defaultStart = new Date(today.getTime() - 90 * 24 * 60 * 60 * 1000)
@@ -468,14 +613,45 @@ const endDate = ref(formatISODate(today))
 const applyPreset = (preset) => {
   selectedPreset.value = preset
   const now = new Date()
-  endDate.value = formatISODate(now)
 
-  if (preset === '90d') {
-    startDate.value = formatISODate(new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000))
-  } else if (preset === '30d') {
-    startDate.value = formatISODate(new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000))
+  if (preset === 'this_week') {
+    // Thứ 2 tuần này đến hôm nay
+    const day = now.getDay()
+    const diffToMonday = day === 0 ? 6 : day - 1
+    const monday = new Date(now)
+    monday.setDate(now.getDate() - diffToMonday)
+    startDate.value = formatISODate(monday)
+    endDate.value = formatISODate(now)
+  } else if (preset === 'last_week') {
+    // Thứ 2 tuần trước đến Chủ nhật tuần trước
+    const day = now.getDay()
+    const diffToMonday = day === 0 ? 6 : day - 1
+    const lastMonday = new Date(now)
+    lastMonday.setDate(now.getDate() - diffToMonday - 7)
+    const lastSunday = new Date(lastMonday)
+    lastSunday.setDate(lastMonday.getDate() + 6)
+    startDate.value = formatISODate(lastMonday)
+    endDate.value = formatISODate(lastSunday)
+  } else if (preset === 'this_month') {
+    // Ngày 1 tháng này đến hôm nay
+    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1)
+    startDate.value = formatISODate(firstDay)
+    endDate.value = formatISODate(now)
+  } else if (preset === 'last_month') {
+    // Ngày đầu đến ngày cuối tháng trước
+    const firstDayLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+    const lastDayLastMonth = new Date(now.getFullYear(), now.getMonth(), 0)
+    startDate.value = formatISODate(firstDayLastMonth)
+    endDate.value = formatISODate(lastDayLastMonth)
   } else if (preset === '7d') {
     startDate.value = formatISODate(new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000))
+    endDate.value = formatISODate(now)
+  } else if (preset === '30d') {
+    startDate.value = formatISODate(new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000))
+    endDate.value = formatISODate(now)
+  } else if (preset === '90d') {
+    startDate.value = formatISODate(new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000))
+    endDate.value = formatISODate(now)
   } else if (preset === 'all') {
     startDate.value = ''
     endDate.value = ''
@@ -486,6 +662,48 @@ const applyPreset = (preset) => {
 const onCustomDateChange = () => {
   selectedPreset.value = 'custom'
   fetchData()
+}
+
+// 5. Multi-column Sorting Logic
+const sortState = ref({
+  campaigns: { col: 'spend', dir: 'desc' },
+  adsets: { col: 'spend', dir: 'desc' },
+  ads: { col: 'spend', dir: 'desc' },
+  attribution: { col: 'totalRevenue', dir: 'desc' }
+})
+
+const handleSort = (tab, col) => {
+  if (!sortState.value[tab]) {
+    sortState.value[tab] = { col, dir: 'desc' }
+    return
+  }
+  if (sortState.value[tab].col === col) {
+    sortState.value[tab].dir = sortState.value[tab].dir === 'asc' ? 'desc' : 'asc'
+  } else {
+    sortState.value[tab].col = col
+    sortState.value[tab].dir = 'desc'
+  }
+}
+
+const getSortIcon = (tab, col) => {
+  const current = sortState.value[tab]
+  if (!current || current.col !== col) return '↕'
+  return current.dir === 'asc' ? '↑' : '↓'
+}
+
+const genericSort = (list, col, dir) => {
+  if (!col) return list
+  return [...list].sort((a, b) => {
+    let va = a[col]
+    let vb = b[col]
+    if (va === undefined || va === null) va = 0
+    if (vb === undefined || vb === null) vb = 0
+    if (typeof va === 'string') {
+      const cmp = va.localeCompare(vb)
+      return dir === 'asc' ? cmp : -cmp
+    }
+    return dir === 'asc' ? (va - vb) : (vb - va)
+  })
 }
 
 const summary = ref({
@@ -520,21 +738,85 @@ const matchedAttributionList = computed(() => {
 })
 
 const filteredCampaigns = computed(() => {
-  if (!searchQuery.value) return campaignsList.value
-  const q = searchQuery.value.toLowerCase()
-  return campaignsList.value.filter(c => c.name.toLowerCase().includes(q) || (c.brand && c.brand.toLowerCase().includes(q)))
+  let list = campaignsList.value
+  if (searchQuery.value) {
+    const q = searchQuery.value.toLowerCase()
+    list = list.filter(c => c.name.toLowerCase().includes(q) || (c.brand && c.brand.toLowerCase().includes(q)))
+  }
+  const s = sortState.value.campaigns
+  return genericSort(list, s?.col, s?.dir)
 })
 
 const filteredAdSets = computed(() => {
-  if (!searchQuery.value) return adSetsList.value
-  const q = searchQuery.value.toLowerCase()
-  return adSetsList.value.filter(a => a.name.toLowerCase().includes(q) || (a.campaignName && a.campaignName.toLowerCase().includes(q)))
+  let list = adSetsList.value
+  if (searchQuery.value) {
+    const q = searchQuery.value.toLowerCase()
+    list = list.filter(a => a.name.toLowerCase().includes(q) || (a.campaignName && a.campaignName.toLowerCase().includes(q)) || (a.brand && a.brand.toLowerCase().includes(q)))
+  }
+  const s = sortState.value.adsets
+  return genericSort(list, s?.col, s?.dir)
 })
 
+// Tab Ads: hỗ trợ view 'detail' và 'grouped'
 const filteredAds = computed(() => {
-  if (!searchQuery.value) return adsList.value
-  const q = searchQuery.value.toLowerCase()
-  return adsList.value.filter(a => a.id.toLowerCase().includes(q) || a.name.toLowerCase().includes(q) || (a.brand && a.brand.toLowerCase().includes(q)))
+  let list = adsList.value
+  if (searchQuery.value) {
+    const q = searchQuery.value.toLowerCase()
+    list = list.filter(a => a.id.toLowerCase().includes(q) || a.name.toLowerCase().includes(q) || (a.brand && a.brand.toLowerCase().includes(q)))
+  }
+
+  if (adViewMode.value === 'grouped') {
+    // Gom nhóm theo name hoặc tên content
+    const map = new Map()
+    for (const ad of list) {
+      const key = (ad.name || 'Không có tên').trim()
+      if (!map.has(key)) {
+        map.set(key, {
+          id: `group-${map.size + 1}`,
+          name: key,
+          adCount: 1,
+          brand: ad.brand || 'Khác',
+          format: ad.format || 'MESS',
+          target: ad.target || 'ALL',
+          spend: ad.spend || 0,
+          impressions: ad.impressions || 0,
+          clicks: ad.clicks || 0,
+          matchedLeadsCount: ad.matchedLeadsCount || 0,
+          orderCount: ad.orderCount || 0,
+          totalRevenue: ad.totalRevenue || 0,
+        })
+      } else {
+        const item = map.get(key)
+        item.adCount += 1
+        item.spend += (ad.spend || 0)
+        item.impressions += (ad.impressions || 0)
+        item.clicks += (ad.clicks || 0)
+        item.matchedLeadsCount += (ad.matchedLeadsCount || 0)
+        item.orderCount += (ad.orderCount || 0)
+        item.totalRevenue += (ad.totalRevenue || 0)
+      }
+    }
+    const grouped = Array.from(map.values()).map(g => {
+      const ctr = g.impressions > 0 ? Number(((g.clicks / g.impressions) * 100).toFixed(2)) : 0
+      const roas = g.spend > 0 ? Number((g.totalRevenue / g.spend).toFixed(2)) : 0
+      return { ...g, ctr, roas }
+    })
+    const s = sortState.value.ads
+    return genericSort(grouped, s?.col, s?.dir)
+  }
+
+  const s = sortState.value.ads
+  return genericSort(list, s?.col, s?.dir)
+})
+
+const filteredAttribution = computed(() => {
+  let list = attributionList.value
+  if (searchQuery.value) {
+    const q = searchQuery.value.toLowerCase()
+    list = list.filter(a => a.adId.toLowerCase().includes(q) || a.adName.toLowerCase().includes(q) || (a.brand && a.brand.toLowerCase().includes(q)) || (a.campaignName && a.campaignName.toLowerCase().includes(q)))
+  }
+  const s = sortState.value.attribution
+  return genericSort(list, s?.col, s?.dir)
 })
 
 const sortedLeads = computed(() => {
@@ -550,6 +832,7 @@ const fetchData = async () => {
     const queryParams = new URLSearchParams()
     if (startDate.value) queryParams.set('tu_ngay', startDate.value)
     if (endDate.value) queryParams.set('den_ngay', endDate.value)
+    if (attributionModel.value) queryParams.set('model', attributionModel.value)
     const qs = queryParams.toString() ? `?${queryParams.toString()}` : ''
 
     const [resSummary, resCamps, resAdSets, resAds, resLeads, resLogs, resAtt] = await Promise.all([
@@ -615,6 +898,13 @@ const formatDate = (dateStr) => {
 }
 
 onMounted(() => {
+  if (process.client) {
+    const savedTheme = localStorage.getItem('tool_marketing_theme')
+    if (savedTheme === 'light') {
+      isLightMode.value = true
+      document.body.classList.add('light-theme')
+    }
+  }
   fetchData()
 })
 </script>
@@ -1000,6 +1290,41 @@ h1 {
 .text-dim { color: #64748b; }
 .text-xs { font-size: 11px; }
 
+/* Sortable Headers */
+.sortable-th {
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.sortable-th:hover {
+  color: var(--cyan) !important;
+  background-color: rgba(6, 182, 212, 0.08) !important;
+}
+
+.sort-icon {
+  display: inline-block;
+  margin-left: 4px;
+  font-size: 12px;
+  color: var(--cyan);
+  opacity: 0.8;
+}
+
+/* View Mode Toggle & Model Selector */
+.view-mode-toggle,
+.attribution-model-selector {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.theme-toggle-btn {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  color: var(--text-main);
+}
+
 .badge {
   display: inline-block;
   padding: 4px 10px;
@@ -1039,5 +1364,107 @@ h1 {
 
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+/* ========================================================
+   LIGHT MODE THEME STYLES (Chống đau mắt theo yêu cầu)
+   ======================================================== */
+body.light-theme {
+  --bg-dark: #f1f5f9;
+  --card-bg: #ffffff;
+  --card-border: #cbd5e1;
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  background-color: #f8fafc;
+  color: #0f172a;
+}
+
+body.light-theme .header {
+  border-bottom-color: #e2e8f0;
+}
+
+body.light-theme .subtitle {
+  color: #64748b;
+}
+
+body.light-theme .card {
+  background: #ffffff;
+  border-color: #e2e8f0;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04);
+}
+
+body.light-theme .btn-secondary {
+  background: #ffffff;
+  color: #1e293b;
+  border-color: #cbd5e1;
+}
+
+body.light-theme .btn-secondary:hover {
+  background: #f1f5f9;
+}
+
+body.light-theme .preset-btn {
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+  color: #475569;
+}
+
+body.light-theme .preset-btn:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+body.light-theme .preset-btn.active {
+  background: rgba(6, 182, 212, 0.15);
+  border-color: #0891b2;
+  color: #0891b2;
+}
+
+body.light-theme .search-input,
+body.light-theme .date-picker-input {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  color: #0f172a;
+}
+
+body.light-theme .data-table th {
+  background: #f8fafc;
+  color: #475569;
+  border-bottom-color: #e2e8f0;
+}
+
+body.light-theme .data-table td {
+  border-bottom-color: #f1f5f9;
+  color: #1e293b;
+}
+
+body.light-theme .data-table tr:hover {
+  background: #f8fafc;
+}
+
+body.light-theme .tab-btn {
+  color: #64748b;
+}
+
+body.light-theme .tab-btn:hover {
+  color: #0f172a;
+  background: #e2e8f0;
+}
+
+body.light-theme .tab-btn.active {
+  background: #ffffff;
+  color: #0284c7;
+  border-color: #cbd5e1;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+}
+
+body.light-theme .badge-dim {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+body.light-theme .badge-sm {
+  background: #e2e8f0;
+  color: #334155;
 }
 </style>

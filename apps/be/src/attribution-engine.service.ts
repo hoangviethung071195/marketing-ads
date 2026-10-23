@@ -37,9 +37,10 @@ export class AttributionEngineService {
       const cleanPhone = this.normalizePhone(ord.customerPhone);
       if (!cleanPhone) continue;
 
-      // Tìm CustomerLead khớp theo SĐT
+      // Tìm CustomerLead khớp theo SĐT (mặc định lấy tương tác gần nhất của khách)
       const matchedLead = await this.prisma.customerLead.findFirst({
         where: { phoneNumber: cleanPhone },
+        orderBy: { createdTime: 'desc' },
         include: { ad: true },
       });
 
@@ -85,9 +86,10 @@ export class AttributionEngineService {
   }
 
   /**
-   * Tính toán chỉ số ROAS & Doanh thu theo từng Ad ID
+   * Tính toán chỉ số ROAS & Doanh thu theo từng Ad ID theo Attribution Model
+   * Hỗ trợ model: 'last_click' (mặc định), 'last_click_7d', 'last_click_30d', 'first_click'
    */
-  async getAdAttributionReport(tuNgay?: string, denNgay?: string) {
+  async getAdAttributionReport(tuNgay?: string, denNgay?: string, model: string = 'last_click') {
     const orderWhere: any = {};
     if (tuNgay || denNgay) {
       orderWhere.orderDate = {};
@@ -107,13 +109,29 @@ export class AttributionEngineService {
         adSet: { include: { campaign: true } },
         insights: { where: insightWhere },
         matchedLeads: true,
-        orders: { where: orderWhere },
+        orders: {
+          where: orderWhere,
+          include: { customerLead: true },
+        },
       },
     });
 
     return ads.map((ad) => {
       const spend = ad.insights.reduce((sum, cur) => sum + (cur.spend || 0), 0);
-      const validOrders = ad.orders.filter((o) => o.status !== 'CANCELLED');
+      let validOrders = ad.orders.filter((o) => o.status !== 'CANCELLED');
+
+      // Áp dụng Attribution Window theo yêu cầu của Tuấn
+      if (model === 'last_click_7d' || model === 'last_click_30d') {
+        const windowDays = model === 'last_click_7d' ? 7 : 30;
+        validOrders = validOrders.filter((o) => {
+          if (!o.customerLead?.createdTime) return true;
+          const orderTime = new Date(o.orderDate).getTime();
+          const leadTime = new Date(o.customerLead.createdTime).getTime();
+          const diffDays = (orderTime - leadTime) / (1000 * 60 * 60 * 24);
+          return diffDays >= 0 && diffDays <= windowDays;
+        });
+      }
+
       const totalRevenue = validOrders.reduce((sum, o) => sum + o.revenue, 0);
       const orderCount = validOrders.length;
       const roas = spend > 0 ? parseFloat((totalRevenue / spend).toFixed(2)) : 0;

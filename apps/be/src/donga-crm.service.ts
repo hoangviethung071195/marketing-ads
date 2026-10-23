@@ -95,19 +95,20 @@ export class DongaCrmService {
     this.logger.log('Bắt đầu đồng bộ đơn hàng Đông Á và đối soát Attribution...');
     const orders = await this.fetchDongaOrders();
 
-    // Lấy tất cả leads có số điện thoại
+    // Lấy tất cả leads có số điện thoại, sắp xếp theo tương tác gần nhất trước
     const leads = await this.prisma.customerLead.findMany({
       where: { phoneNumber: { not: null } },
+      orderBy: { createdTime: 'desc' },
       include: { ad: true },
     });
 
-    // Tạo bản đồ hash SĐT -> Lead
+    // Tạo bản đồ hash SĐT -> Lead (ưu tiên lead mới nhất)
     const hashToLeadMap = new Map<string, typeof leads[0]>();
     for (const lead of leads) {
       if (lead.phoneNumber) {
         const { e164Hash, zeroHash } = this.getPhoneHashes(lead.phoneNumber);
-        hashToLeadMap.set(e164Hash, lead);
-        hashToLeadMap.set(zeroHash, lead);
+        if (!hashToLeadMap.has(e164Hash)) hashToLeadMap.set(e164Hash, lead);
+        if (!hashToLeadMap.has(zeroHash)) hashToLeadMap.set(zeroHash, lead);
       }
     }
 

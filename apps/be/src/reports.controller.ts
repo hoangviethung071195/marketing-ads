@@ -90,8 +90,9 @@ export class ReportsController {
   async getAttribution(
     @Query('tu_ngay') tuNgay?: string,
     @Query('den_ngay') denNgay?: string,
+    @Query('model') model?: string,
   ) {
-    return await this.attributionEngine.getAdAttributionReport(tuNgay, denNgay);
+    return await this.attributionEngine.getAdAttributionReport(tuNgay, denNgay, model);
   }
 
   @Post('crm/orders')
