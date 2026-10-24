@@ -119,12 +119,19 @@
           <label>Đến ngày:</label>
           <input type="date" v-model="endDate" @change="onCustomDateChange" class="date-picker-input" />
         </div>
-        <button class="btn btn-secondary btn-sm" @click="fetchData">
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          Lọc
+        <button class="btn btn-secondary btn-sm" @click="fetchData" :disabled="isLoadingData">
+          <span v-if="isLoadingData" class="spinner"></span>
+          <svg v-else xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          {{ isLoadingData ? 'Đang tải...' : 'Lọc' }}
         </button>
       </div>
     </section>
+
+    <!-- Global Loading Banner -->
+    <div v-if="isLoadingData" class="loading-bar-indicator">
+      <div class="spinner spinner-primary"></div>
+      <span>Đang tải và tính toán số liệu đối soát... Vui lòng đợi trong giây lát.</span>
+    </div>
 
     <!-- Controls Bar: Dimension Selector & Search -->
     <div class="controls-bar">
@@ -827,7 +834,10 @@ const sortedLeads = computed(() => {
   })
 })
 
+const isLoadingData = ref(false)
+
 const fetchData = async () => {
+  isLoadingData.value = true
   try {
     const queryParams = new URLSearchParams()
     if (startDate.value) queryParams.set('tu_ngay', startDate.value)
@@ -854,6 +864,8 @@ const fetchData = async () => {
     attributionList.value = resAtt
   } catch (err) {
     console.error('Lỗi lấy dữ liệu từ Backend API:', err)
+  } finally {
+    isLoadingData.value = false
   }
 }
 
@@ -1360,6 +1372,33 @@ h1 {
   border-radius: 50%;
   border-top-color: white;
   animation: spin 0.8s linear infinite;
+}
+
+.spinner-primary {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(99, 102, 241, 0.2);
+  border-top-color: var(--primary);
+}
+
+.loading-bar-indicator {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 18px;
+  margin-bottom: 20px;
+  background: rgba(99, 102, 241, 0.1);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #818cf8;
+}
+
+body.light-theme .loading-bar-indicator {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #2563eb;
 }
 
 @keyframes spin {
