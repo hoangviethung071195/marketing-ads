@@ -22,23 +22,27 @@ export class MessengerService implements OnApplicationBootstrap {
    * Nếu chưa có (bị hụt CronJob 01:00 AM do ngủ đông) -> TỰ ĐỘNG CHẠY BÙ NGAY LẬP TỨC!
    */
   async onApplicationBootstrap() {
-    this.logger.log('🚀 Server vừa khởi động/thức dậy. Đang kiểm tra lịch sử đồng bộ...');
-    const now = new Date();
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+    try {
+      this.logger.log('🚀 Server vừa khởi động/thức dậy. Đang kiểm tra lịch sử đồng bộ...');
+      const now = new Date();
+      const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
 
-    const lastSyncToday = await this.prisma.syncLog.findFirst({
-      where: {
-        type: 'MESSENGER',
-        status: 'SUCCESS',
-        syncedAt: { gte: startOfToday },
-      },
-    });
+      const lastSyncToday = await this.prisma.syncLog.findFirst({
+        where: {
+          type: 'MESSENGER',
+          status: 'SUCCESS',
+          syncedAt: { gte: startOfToday },
+        },
+      });
 
-    if (!lastSyncToday) {
-      this.logger.log('⚠️ Phát hiện hôm nay chưa có lần đồng bộ nào (server có thể vừa thức dậy sau sleep). Tự động kích hoạt chạy bù ngay!');
-      await this.handleDailyMessengerSync();
-    } else {
-      this.logger.log(`✅ Hôm nay đã được đồng bộ đầy đủ lúc ${lastSyncToday.syncedAt.toISOString()}, không cần chạy bù.`);
+      if (!lastSyncToday) {
+        this.logger.log('⚠️ Phát hiện hôm nay chưa có lần đồng bộ nào (server có thể vừa thức dậy sau sleep). Tự động kích hoạt chạy bù ngay!');
+        await this.handleDailyMessengerSync();
+      } else {
+        this.logger.log(`✅ Hôm nay đã được đồng bộ đầy đủ lúc ${lastSyncToday.syncedAt.toISOString()}, không cần chạy bù.`);
+      }
+    } catch (err) {
+      this.logger.warn(`Không thể kiểm tra lịch sử đồng bộ khi khởi động (có thể DB vừa tạo mới): ${err.message}`);
     }
   }
 
