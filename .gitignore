@@ -71,3 +71,11 @@ packages
 # Coverage / Test reports
 coverage/
 .nyc_output/
+
+# SQLite Database & Prisma local storage
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+apps/be/prisma/*.db
+apps/be/prisma/*.db-journal
