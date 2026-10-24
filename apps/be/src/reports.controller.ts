@@ -62,16 +62,26 @@ export class ReportsController {
     return await this.reportsService.getSyncLogs();
   }
 
+  @Post('sync/ads')
+  async triggerAdsSync() {
+    const result = await this.fbAdsService.syncFbAdsData();
+    return {
+      success: true,
+      message: 'Đã hoàn thành đồng bộ dữ liệu Ads!',
+      result,
+    };
+  }
+
   @Post('sync/all')
   async triggerFullSync() {
     const adsResult = await this.fbAdsService.syncFbAdsData();
-    const messengerResult = await this.messengerService.syncMessengerLeads();
     const crmResult = await this.dongaCrmService.syncDongaOrders();
+    // Chạy quét messenger nền để không bị timeout HTTP
+    this.messengerService.syncMessengerLeads().catch(() => {});
     return {
       success: true,
-      message: 'Đã hoàn thành kích hoạt đồng bộ dữ liệu Facebook Ads, Messenger và Đơn hàng Đông Á',
+      message: 'Đã kích hoạt đồng bộ dữ liệu Facebook Ads, CRM và Messenger nền!',
       ads: adsResult,
-      messenger: messengerResult,
       crm: crmResult,
     };
   }
