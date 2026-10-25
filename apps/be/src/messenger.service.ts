@@ -36,8 +36,11 @@ export class MessengerService implements OnApplicationBootstrap {
       });
 
       if (!lastSyncToday) {
-        this.logger.log('⚠️ Phát hiện hôm nay chưa có lần đồng bộ nào (server có thể vừa thức dậy sau sleep). Tự động kích hoạt chạy bù ngay!');
-        await this.handleDailyMessengerSync();
+        this.logger.log('⚠️ Phát hiện hôm nay chưa có lần đồng bộ nào (server có thể vừa thức dậy sau sleep). Tự động kích hoạt chạy bù ngầm ngay!');
+        // Chạy ngầm (không await) để server lập tức listen port và phục vụ frontend ngay
+        this.handleDailyMessengerSync().catch((err) => {
+          this.logger.warn(`Lỗi khi chạy bù tự động: ${err.message}`);
+        });
       } else {
         this.logger.log(`✅ Hôm nay đã được đồng bộ đầy đủ lúc ${lastSyncToday.syncedAt.toISOString()}, không cần chạy bù.`);
       }
