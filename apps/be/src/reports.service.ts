@@ -1,9 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from './prisma.service';
+import { TrackingParserService } from './tracking-parser.service';
 
 @Injectable()
 export class ReportsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private trackingParser: TrackingParserService,
+  ) {}
 
   async getSummaryMetrics(tuNgay?: string, denNgay?: string) {
     const insightWhere: any = {};
@@ -94,15 +98,24 @@ export class ReportsService {
       const totalRevenue = validOrders.reduce((sum, o) => sum + o.revenue, 0);
       const roas = spend > 0 ? parseFloat((totalRevenue / spend).toFixed(2)) : 0;
 
+      // Bóc tách động nhãn cho từng mẫu Ad
+      const parsedCamp = this.trackingParser.parseCampaignName(ad.adSet?.campaign?.name || '');
+      const parsedAdSet = this.trackingParser.parseCampaignName(ad.adSet?.name || '');
+      const creativeFormat = this.trackingParser.parseAdCreativeFormat(ad.name, parsedCamp.format);
+      const resolvedTarget = (parsedAdSet.target && parsedAdSet.target !== 'Đại trà (No Target)')
+        ? parsedAdSet.target
+        : (parsedCamp.target || 'Đại trà (No Target)');
+      const resolvedBrand = parsedCamp.brand || ad.adSet?.campaign?.brand || 'Khác';
+
       return {
         id: ad.id,
         name: ad.name,
         status: ad.status,
         campaignName: ad.adSet?.campaign?.name || 'N/A',
-        brand: ad.adSet?.campaign?.brand || 'Khác',
-        target: ad.adSet?.campaign?.target || 'ALL',
-        format: ad.adSet?.campaign?.format || 'MESS',
-        dateTag: ad.adSet?.campaign?.dateTag || '-',
+        brand: resolvedBrand,
+        target: resolvedTarget,
+        format: creativeFormat,
+        dateTag: parsedCamp.dateTag || ad.adSet?.campaign?.dateTag || '-',
         adSetName: ad.adSet?.name || 'N/A',
         spend,
         impressions,
@@ -216,14 +229,16 @@ export class ReportsService {
       const roas = spend > 0 ? parseFloat((totalRevenue / spend).toFixed(2)) : 0;
       const cpa = orderCount > 0 ? Math.round(spend / orderCount) : 0;
 
+      const parsedCamp = this.trackingParser.parseCampaignName(camp.name || '');
+
       return {
         id: camp.id,
         name: camp.name,
         status: camp.status,
-        brand: camp.brand || 'Khác',
-        target: camp.target || 'ALL',
-        format: camp.format || 'MESS',
-        dateTag: camp.dateTag || '-',
+        brand: parsedCamp.brand || camp.brand || 'Khác',
+        target: parsedCamp.target || camp.target || 'Đại trà (No Target)',
+        format: parsedCamp.format || camp.format || 'Ảnh',
+        dateTag: parsedCamp.dateTag || camp.dateTag || '-',
         adSetCount: camp.adSets.length,
         spend,
         impressions,
@@ -313,14 +328,20 @@ export class ReportsService {
       const roas = spend > 0 ? parseFloat((totalRevenue / spend).toFixed(2)) : 0;
       const cpa = orderCount > 0 ? Math.round(spend / orderCount) : 0;
 
+      const parsedCamp = this.trackingParser.parseCampaignName(adset.campaign?.name || '');
+      const parsedAdSet = this.trackingParser.parseCampaignName(adset.name || '');
+      const resolvedTarget = (parsedAdSet.target && parsedAdSet.target !== 'Đại trà (No Target)')
+        ? parsedAdSet.target
+        : (parsedCamp.target || 'Đại trà (No Target)');
+
       return {
         id: adset.id,
         name: adset.name,
         status: adset.status,
         campaignName: adset.campaign?.name || 'N/A',
-        brand: adset.campaign?.brand || 'Khác',
-        target: adset.campaign?.target || 'ALL',
-        format: adset.campaign?.format || 'MESS',
+        brand: parsedCamp.brand || adset.campaign?.brand || 'Khác',
+        target: resolvedTarget,
+        format: parsedCamp.format || adset.campaign?.format || 'Ảnh',
         adCount: adset.ads.length,
         spend,
         impressions,

@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from './prisma.service';
+import { TrackingParserService } from './tracking-parser.service';
 
 export interface CrmOrderInput {
   orderCode: string;
@@ -14,7 +15,10 @@ export interface CrmOrderInput {
 export class AttributionEngineService {
   private readonly logger = new Logger(AttributionEngineService.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private trackingParser: TrackingParserService,
+  ) {}
 
   /**
    * Chuẩn hóa số điện thoại về định dạng 10 chữ số
@@ -137,13 +141,20 @@ export class AttributionEngineService {
       const roas = spend > 0 ? parseFloat((totalRevenue / spend).toFixed(2)) : 0;
       const cpa = orderCount > 0 ? Math.round(spend / orderCount) : 0;
 
+      const parsedCamp = this.trackingParser.parseCampaignName(ad.adSet?.campaign?.name || '');
+      const parsedAdSet = this.trackingParser.parseCampaignName(ad.adSet?.name || '');
+      const creativeFormat = this.trackingParser.parseAdCreativeFormat(ad.name, parsedCamp.format);
+      const resolvedTarget = (parsedAdSet.target && parsedAdSet.target !== 'Đại trà (No Target)')
+        ? parsedAdSet.target
+        : (parsedCamp.target || 'Đại trà (No Target)');
+
       return {
         adId: ad.id,
         adName: ad.name,
         campaignName: ad.adSet?.campaign?.name || 'N/A',
-        brand: ad.adSet?.campaign?.brand || 'Khác',
-        target: ad.adSet?.campaign?.target || 'ALL',
-        format: ad.adSet?.campaign?.format || 'MESS',
+        brand: parsedCamp.brand || ad.adSet?.campaign?.brand || 'Khác',
+        target: resolvedTarget,
+        format: creativeFormat,
         spend,
         orderCount,
         totalRevenue,

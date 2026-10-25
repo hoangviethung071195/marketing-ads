@@ -226,8 +226,18 @@
                 </span>
               </td>
               <td><span class="badge badge-blue">{{ c.brand }}</span></td>
-              <td><span class="badge badge-amber">{{ c.format }}</span></td>
-              <td><span class="text-xs">{{ c.target }}</span></td>
+              <td>
+                <span :class="[
+                  'badge font-bold',
+                  c.format === 'Video' ? 'badge-purple' :
+                  c.format === 'Ảnh' ? 'badge-blue' :
+                  c.format === 'Carousel' ? 'badge-amber' :
+                  c.format === 'Only Text' ? 'badge-dim' : 'badge-amber'
+                ]">
+                  {{ c.format }}
+                </span>
+              </td>
+              <td><span class="text-xs font-medium">{{ c.target }}</span></td>
               <td class="font-mono">{{ c.adSetCount }} nhóm</td>
               <td class="font-mono text-amber font-bold">{{ formatCurrency(c.spend) }}</td>
               <td class="font-mono">{{ formatNumber(c.impressions) }}</td>
@@ -387,8 +397,18 @@
               <td class="font-bold">{{ ad.name }}</td>
               <td v-if="adViewMode === 'grouped'" class="font-mono"><span class="badge badge-dim">{{ ad.adCount }} ads</span></td>
               <td><span class="badge badge-blue">{{ ad.brand || 'Khác' }}</span></td>
-              <td><span class="badge badge-amber">{{ ad.format || 'MESS' }}</span></td>
-              <td><span class="text-xs">{{ ad.target || 'ALL' }}</span></td>
+              <td>
+                <span :class="[
+                  'badge font-bold',
+                  ad.format === 'Video' ? 'badge-purple' :
+                  ad.format === 'Ảnh' ? 'badge-blue' :
+                  ad.format === 'Carousel' ? 'badge-amber' :
+                  ad.format === 'Only Text' ? 'badge-dim' : 'badge-amber'
+                ]">
+                  {{ ad.format || 'Ảnh' }}
+                </span>
+              </td>
+              <td><span class="text-xs font-medium">{{ ad.target || 'Đại trà (No Target)' }}</span></td>
               <td class="font-mono text-amber">{{ formatCurrency(ad.spend) }}</td>
               <td class="font-mono">{{ formatNumber(ad.impressions) }}</td>
               <td class="font-mono">{{ formatNumber(ad.clicks) }} <span class="badge-sm">{{ ad.ctr }}%</span></td>
@@ -783,8 +803,8 @@ const filteredAds = computed(() => {
           name: key,
           adCount: 1,
           brand: ad.brand || 'Khác',
-          format: ad.format || 'MESS',
-          target: ad.target || 'ALL',
+          format: ad.format || 'Ảnh',
+          target: ad.target || 'Đại trà (No Target)',
           spend: ad.spend || 0,
           impressions: ad.impressions || 0,
           clicks: ad.clicks || 0,
@@ -1355,6 +1375,7 @@ h1 {
 
 .badge-success { background: rgba(16, 185, 129, 0.15); color: #34d399; }
 .badge-blue { background: rgba(99, 102, 241, 0.15); color: #818cf8; }
+.badge-purple { background: rgba(168, 85, 247, 0.15); color: #c084fc; }
 .badge-amber { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
 .badge-danger { background: rgba(239, 68, 68, 0.15); color: #f87171; }
 .badge-dim { background: rgba(255, 255, 255, 0.05); color: #64748b; }

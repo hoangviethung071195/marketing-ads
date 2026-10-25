@@ -1,10 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import * as ExcelJS from 'exceljs';
 import { PrismaService } from './prisma.service';
+import { TrackingParserService } from './tracking-parser.service';
 
 @Injectable()
 export class ExportService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private trackingParser: TrackingParserService,
+  ) {}
 
   /**
    * Tạo file Excel báo cáo tổng hợp 3 Sheet: Campaign, Ads và Khách hàng
@@ -117,12 +121,14 @@ export class ExportService {
       totalCampOrders += orderCount;
       totalCampRevenue += totalRevenue;
 
+      const parsedCamp = this.trackingParser.parseCampaignName(camp.name || '');
+
       const r = sheetCamp.addRow({
         id: camp.id,
         name: camp.name,
-        brand: camp.brand || 'Khác',
-        format: camp.format || 'MESS',
-        target: camp.target || 'ALL',
+        brand: parsedCamp.brand || camp.brand || 'Khác',
+        format: parsedCamp.format || camp.format || 'Ảnh',
+        target: parsedCamp.target || camp.target || 'Đại trà (No Target)',
         adSetCount: camp.adSets.length,
         spend,
         impressions,
@@ -191,13 +197,20 @@ export class ExportService {
       const adRevenue = validOrders.reduce((sum, o) => sum + o.revenue, 0);
       const roas = insight.spend > 0 ? parseFloat((adRevenue / insight.spend).toFixed(2)) : 0;
 
+      const parsedCamp = this.trackingParser.parseCampaignName(ad.adSet?.campaign?.name || '');
+      const parsedAdSet = this.trackingParser.parseCampaignName(ad.adSet?.name || '');
+      const creativeFormat = this.trackingParser.parseAdCreativeFormat(ad.name, parsedCamp.format);
+      const resolvedTarget = (parsedAdSet.target && parsedAdSet.target !== 'Đại trà (No Target)')
+        ? parsedAdSet.target
+        : (parsedCamp.target || 'Đại trà (No Target)');
+
       const row = sheetAds.addRow({
         adId: ad.id,
         adName: ad.name,
         campaignName: ad.adSet?.campaign?.name || 'N/A',
-        brand: ad.adSet?.campaign?.brand || 'Khác',
-        target: ad.adSet?.campaign?.target || 'ALL',
-        format: ad.adSet?.campaign?.format || 'MESS',
+        brand: parsedCamp.brand || ad.adSet?.campaign?.brand || 'Khác',
+        target: resolvedTarget,
+        format: creativeFormat,
         spend: insight.spend,
         impressions: insight.impressions,
         clicks: insight.clicks,
