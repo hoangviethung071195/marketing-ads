@@ -57,6 +57,15 @@ export class AppModule implements OnApplicationBootstrap {
           await this.messengerService.syncMessengerLeads();
           await this.dongaCrmService.syncDongaOrders();
           this.logger.log('✅ Khởi tạo và khớp nối dữ liệu Ads ↔ Khách Messenger ↔ Đơn hàng CRM thành công!');
+        } else {
+          // Nếu đã có leads nhưng chưa đối soát CRM đơn hàng, tự động kích hoạt đối soát
+          const matchedOrders = await this.prisma.crmOrder.count({
+            where: { customerLeadId: { not: null } },
+          });
+          if (matchedOrders === 0) {
+            this.logger.log('🔄 Đã có Leads nhưng chưa có liên kết Đơn hàng CRM. Đang tự động đối soát CRM...');
+            await this.dongaCrmService.syncDongaOrders();
+          }
         }
       } catch (err) {
         this.logger.error(`Lỗi khi tự động khởi tạo dữ liệu ban đầu: ${err.message}`);
