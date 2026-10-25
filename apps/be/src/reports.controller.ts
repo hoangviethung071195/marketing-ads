@@ -75,14 +75,17 @@ export class ReportsController {
   @Post('sync/all')
   async triggerFullSync() {
     const adsResult = await this.fbAdsService.syncFbAdsData();
-    const crmResult = await this.dongaCrmService.syncDongaOrders();
-    // Chạy quét messenger nền để không bị timeout HTTP
-    this.messengerService.syncMessengerLeads().catch(() => {});
+    // Chạy quét messenger rồi sau đó đối soát đơn CRM ở nền để có đủ số điện thoại khách hàng khớp đơn
+    (async () => {
+      try {
+        await this.messengerService.syncMessengerLeads();
+        await this.dongaCrmService.syncDongaOrders();
+      } catch (e) {}
+    })();
     return {
       success: true,
-      message: 'Đã kích hoạt đồng bộ dữ liệu Facebook Ads, CRM và Messenger nền!',
+      message: 'Đã kích hoạt đồng bộ dữ liệu Facebook Ads, đồng thời đang quét Messenger & khớp Đơn hàng Đông Á nền!',
       ads: adsResult,
-      crm: crmResult,
     };
   }
 

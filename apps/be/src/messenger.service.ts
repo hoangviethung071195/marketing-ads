@@ -113,20 +113,26 @@ export class MessengerService implements OnApplicationBootstrap {
         const now = new Date();
         const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
 
-        // Tìm thời điểm đồng bộ Messenger thành công gần nhất trong DB
-        const lastSyncLog = await this.prisma.syncLog.findFirst({
-          where: { type: 'MESSENGER', status: 'SUCCESS' },
-          orderBy: { syncedAt: 'desc' },
-        });
-
-        if (lastSyncLog && lastSyncLog.syncedAt < startOfToday) {
-          // Lần đồng bộ trước đó cũ hơn hôm nay (ví dụ máy/server bị tắt hoặc sleep nhiều ngày qua)
-          // -> Tự động quét nối tiếp từ thời điểm đồng bộ gần nhất đó đến nay để không mất dữ liệu!
-          this.logger.log(`⚠️ Phát hiện lần đồng bộ gần nhất (${lastSyncLog.syncedAt.toISOString()}) cũ hơn hôm nay. Tự động quét nối tiếp từ mốc này!`);
-          finalSince = lastSyncLog.syncedAt;
+        const leadCount = await this.prisma.customerLead.count();
+        if (leadCount === 0) {
+          this.logger.log('🌱 Phát hiện cơ sở dữ liệu chưa có Lead nào. Quét toàn bộ lịch sử hội thoại Messenger để nạp đầy đủ khách hàng...');
+          finalSince = undefined;
         } else {
-          // Mặc định: Chỉ quét từ 00:00:00 hôm nay
-          finalSince = startOfToday;
+          // Tìm thời điểm đồng bộ Messenger thành công gần nhất trong DB
+          const lastSyncLog = await this.prisma.syncLog.findFirst({
+            where: { type: 'MESSENGER', status: 'SUCCESS' },
+            orderBy: { syncedAt: 'desc' },
+          });
+
+          if (lastSyncLog && lastSyncLog.syncedAt < startOfToday) {
+            // Lần đồng bộ trước đó cũ hơn hôm nay (ví dụ máy/server bị tắt hoặc sleep nhiều ngày qua)
+            // -> Tự động quét nối tiếp từ thời điểm đồng bộ gần nhất đó đến nay để không mất dữ liệu!
+            this.logger.log(`⚠️ Phát hiện lần đồng bộ gần nhất (${lastSyncLog.syncedAt.toISOString()}) cũ hơn hôm nay. Tự động quét nối tiếp từ mốc này!`);
+            finalSince = lastSyncLog.syncedAt;
+          } else {
+            // Mặc định: Chỉ quét từ 00:00:00 hôm nay
+            finalSince = startOfToday;
+          }
         }
       }
 

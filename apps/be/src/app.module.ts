@@ -42,6 +42,7 @@ export class AppModule implements OnApplicationBootstrap {
   constructor(
     private prisma: PrismaService,
     private fbAdsService: FbAdsService,
+    private messengerService: MessengerService,
     private dongaCrmService: DongaCrmService,
   ) {}
 
@@ -49,12 +50,13 @@ export class AppModule implements OnApplicationBootstrap {
     // Chạy ngầm sau khi server đã lắng nghe cổng để không bị chậm khởi động
     setTimeout(async () => {
       try {
-        const adCount = await this.prisma.ad.count();
-        if (adCount === 0) {
-          this.logger.log('🌱 Phát hiện cơ sở dữ liệu mới (0 Ads). Đang tự động nạp dữ liệu Facebook Ads & CRM...');
+        const leadCount = await this.prisma.customerLead.count();
+        if (leadCount === 0) {
+          this.logger.log('🌱 Phát hiện cơ sở dữ liệu chưa có Khách hàng Leads. Đang tự động nạp Ads, Quét Messenger và Đối soát CRM...');
           await this.fbAdsService.syncFbAdsData();
+          await this.messengerService.syncMessengerLeads();
           await this.dongaCrmService.syncDongaOrders();
-          this.logger.log('✅ Khởi tạo dữ liệu thành công! Người dùng có thể xem báo cáo ngay.');
+          this.logger.log('✅ Khởi tạo và khớp nối dữ liệu Ads ↔ Khách Messenger ↔ Đơn hàng CRM thành công!');
         }
       } catch (err) {
         this.logger.error(`Lỗi khi tự động khởi tạo dữ liệu ban đầu: ${err.message}`);
