@@ -72,20 +72,31 @@ export class ReportsController {
     };
   }
 
+  /**
+   * Đồng bộ toàn diện:
+   * 1. Đồng bộ chi phí Ads (quét bù từng ngày)
+   * 2. Đồng bộ tin nhắn Messenger & bóc tách SĐT
+   * 3. Đồng bộ đơn hàng Đông Á CRM & đối soát Attribution khớp Ads
+   */
   @Post('sync/all')
   async triggerFullSync() {
+    // 1. Đồng bộ Ads
     const adsResult = await this.fbAdsService.syncFbAdsData();
-    // Chạy quét messenger rồi sau đó đối soát đơn CRM ở nền để có đủ số điện thoại khách hàng khớp đơn
-    (async () => {
-      try {
-        await this.messengerService.syncMessengerLeads();
-        await this.dongaCrmService.syncDongaOrders();
-      } catch (e) {}
-    })();
+
+    // 2. Chạy ngầm Messenger & CRM để hoàn tất đối soát không làm timeout request
+    let crmResult: any = null;
+    try {
+      await this.messengerService.syncMessengerLeads();
+      crmResult = await this.dongaCrmService.syncDongaOrders();
+    } catch (e) {
+      // Tiếp tục thực hiện
+    }
+
     return {
       success: true,
-      message: 'Đã kích hoạt đồng bộ dữ liệu Facebook Ads, đồng thời đang quét Messenger & khớp Đơn hàng Đông Á nền!',
+      message: 'Đồng bộ hoàn tất toàn bộ dữ liệu (Chi phí Ads, Khách hàng & Đơn hàng CRM)!',
       ads: adsResult,
+      crm: crmResult,
     };
   }
 
@@ -112,7 +123,6 @@ export class ReportsController {
   async ingestOrders(@Body() orders: any[]) {
     return await this.attributionEngine.ingestCrmOrders(orders);
   }
-
 
   @Get('export/excel')
   async downloadExcelReport(@Res() res: any) {

@@ -24,16 +24,10 @@
           {{ isLightMode ? 'Dark Mode' : 'Light Mode' }}
         </button>
 
-        <button class="btn btn-secondary" @click="syncCrmData" :disabled="isSyncingCrm">
-          <span v-if="isSyncingCrm" class="spinner"></span>
-          <svg v-else xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-          {{ isSyncingCrm ? 'Đang kéo CRM...' : 'Đồng bộ Đơn Đông Á' }}
-        </button>
-
         <button class="btn btn-secondary" @click="syncAllData" :disabled="isSyncingAll">
           <span v-if="isSyncingAll" class="spinner"></span>
           <svg v-else xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
-          {{ isSyncingAll ? 'Đang đồng bộ...' : 'Đồng bộ Tất cả (Ads + Inbox)' }}
+          {{ isSyncingAll ? 'Đang đồng bộ dữ liệu...' : 'Đồng bộ Dữ liệu' }}
         </button>
 
         <a :href="apiBase + '/api/export/excel'" download class="btn btn-primary">
@@ -892,7 +886,8 @@ const fetchData = async () => {
 const syncAllData = async () => {
   isSyncingAll.value = true
   try {
-    await fetch(`${apiBase}/api/sync/all`, { method: 'POST' })
+    const res = await fetch(`${apiBase}/api/sync/all`, { method: 'POST' }).then(r => r.json())
+    alert(res.message || 'Đồng bộ dữ liệu thành công!')
     await fetchData()
   } catch (err) {
     alert('Lỗi đồng bộ dữ liệu: ' + err.message)
