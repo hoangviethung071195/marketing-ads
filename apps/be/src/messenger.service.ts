@@ -236,7 +236,8 @@ export class MessengerService implements OnApplicationBootstrap {
 
         this.logger.log(`Bắt đầu quét hội thoại Messenger (${isCronJob ? 'CRONJOB' : 'MANUAL'}) từ: ${sinceDate ? sinceDate.toISOString() : 'Toàn bộ'}`);
 
-        while (nextUrl && pageCount < maxPages) {
+        let shouldStop = false;
+        while (nextUrl && pageCount < maxPages && !shouldStop) {
           pageCount++;
           const convRes = await axios.get(nextUrl);
           const conversations = convRes.data?.data || [];
@@ -245,6 +246,17 @@ export class MessengerService implements OnApplicationBootstrap {
           if (existingAds.length > 0 && conversations.length > 0) {
             for (let i = 0; i < conversations.length; i++) {
               const conv = conversations[i];
+
+              // Kiểm tra mốc thời gian: Nếu hội thoại cũ hơn sinceDate -> Đã chạm mốc đã quét trước đó, dừng ngay!
+              if (sinceDate && conv.updated_time) {
+                const convDate = new Date(conv.updated_time);
+                if (convDate < sinceDate) {
+                  this.logger.log(`⏹️ Đã chạm mốc hội thoại cũ (${conv.updated_time} < ${sinceDate.toISOString()}). Dừng quét tiếp!`);
+                  shouldStop = true;
+                  break;
+                }
+              }
+
               const sender = conv.senders?.data?.[0] || conv.participants?.data?.[0];
               const assignedAd = existingAds[i % existingAds.length];
               const recentMessages = conv.messages?.data || [];
@@ -261,6 +273,8 @@ export class MessengerService implements OnApplicationBootstrap {
               matchedCount++;
             }
           }
+
+          if (shouldStop) break;
 
           // Kiểm tra trang kế tiếp (phân trang paging.next)
           nextUrl = convRes.data?.paging?.next || null;
